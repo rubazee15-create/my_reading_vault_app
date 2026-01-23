@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "last_updated": "23-01-2026",
+    "total_books": 5
+  },
+  "books": [
+    {
+      "id": 1,
+      "title": "Fourth Wing",
+      "author": "Rebecca Yarros",
+      "genre": "Fantasy",
+      "status": "completed",
+      "pages_read": 544,
+      "total_pages": 544,
+      "rating": 4,
+      "date_started": "12-12-2025",
+      "date_finished": "17-12-2025"
+    },
+    {
+      "id": 2,
+      "title": "Iron Flame",
+      "author": "Rebecca Yarros",
+      "genre": "Fantasy",
+      "status": "completed",
+      "pages_read": 640,
+      "total_pages": 640,
+      "rating": 5,
+      "date_started": "18-12-2025",
+      "date_finished": "22-12-2025"
+    },
+    {
+      "id": 3,
+      "title": "Pride & Prejudice",
+      "author": "Jane Austen",
+      "genre": "Romance",
+      "status": "completed",
+      "pages_read": 384,
+      "total_pages": 384,
+      "rating": 5,
+      "date_started": "5-10-2020",
+      "date_finished": "15-10-2020"
+    },
+    {
+      "id": 4,
+      "title": "Yellowface",
+      "author": "R.F. Kuang",
+      "genre": "Literary Thriller",
+      "status": "not Read",
+      "pages_read": 0,
+      "total_pages": 319,
+      "rating": null,
+      "date_started": null,
+      "date_finished": null
+    },
+    {
+      "id": 5,
+      "title": "My Feudal Lord",
+      "author": "Tehmina Durrani",
+      "genre": "Biography",
+      "status": "reading",
+      "pages_read": 94,
+      "total_pages": 384,
+      "rating": null,
+      "date_started": "12-12-2025",
+      "date_finished": null
+    }
+  ]
+}
