@@ -1,0 +1,4 @@
+# Install The required packages for the project
+ fastapi
+ uvicorn
+ pydantic
