@@ -1,4 +1,4 @@
 # Ignoring the following files
 
 venv/
-__pycacahe__/
+__pycache__/
