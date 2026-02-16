@@ -40,7 +40,8 @@ Following the modular approach:
 uvicorn main:app --reload
 
 5. Access the API:
-* Base API: http
+* Base API: http://127.0.0.1:8000
+* Interactive Swagger UI: http://127.0.0.1:8000/docs
 
 ### 📈 Roadmap
 * Implement User Authentication (OAuth2)
