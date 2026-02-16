@@ -35,6 +35,13 @@ Following the modular approach:
    ```bash
    pip install -r requirements.txt
 
+4. Start the FastAPI server
+```bash
+uvicorn main:app --reload
+
+5. Access the API:
+* Base API: http
+
 ### 📈 Roadmap
 * Implement User Authentication (OAuth2)
 * Add "Reading Progress" percentage tracking.
