@@ -19,27 +19,27 @@ Following the modular approach:
 ├── database.py      
 └── crud.py          
 
-### ⚙️ How to Run Locally
+### ⚙️ Installation & Setup
 
 1. **Clone & Navigate the repository:**
    ```bash
    git clone https://github.com/rubazee15-create/my_reading_vault_app.git
    cd my_reading_vault_app
 
-2. Create virtual Environment
+2. **Create Virtual Environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
-3. Install dependencies
+3. **Install Dependencies:**
    ```bash
    pip install -r requirements.txt
 
-4. Start the FastAPI server
-```bash
-uvicorn main:app --reload
+4. **Start the FastAPI Server:**
+   ```bash
+   uvicorn main:app --reload
 
-5. Access the API:
+5. **Access the API:**
 * Base API: http://127.0.0.1:8000
 * Interactive Swagger UI: http://127.0.0.1:8000/docs
 
