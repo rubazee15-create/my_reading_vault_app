@@ -1,5 +1,5 @@
 # Importing libraries
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, HTTPException, Query
 import json
 
 app = FastAPI()
@@ -27,6 +27,8 @@ def view_books():       # This endpoint will allow users to view all the books t
     return data
 
 # Including new operations to understand path parameters and query parameters in FastAPI.
+
+# Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
 def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0)):
     # Loading all the books
@@ -39,7 +41,9 @@ def view_book(book_id: int = Path(..., description="ID of the book in the Databa
     for book in books_list:
         if book["id"] == book_id:
             return book
-    return {'error':"Book not found!"}
+    # return {'error':"Book not found!"}
+    # Instead of raising a normal JSON error, HTTP Exception with a proper status code will be used to specify '404 error' if the entered resource is not available. 
+    raise HTTPException(status_code=404, detail="Book not found!")
 
 
 @app.get("/book_title/{book_title}")
@@ -54,4 +58,29 @@ def view_book_title(book_title: str = Path(..., description="Add the Title of th
         if book_title.lower() in book["title"].lower():
             return book
         
-    return {'error': f"Book title: '{book_title}' not found"}
+    # return {'error': f"Book title: '{book_title}' not found"}
+    # HTTP Exception with status code:
+    raise HTTPException(status_code=404, detail="Book Title not found!")
+
+# Query Parameters
+@app.get("/sort")
+def sort_books(sort_by: str = Query(..., description="Sort on the basis of genre and authors"), order: str = Query("asc", description= "Sort in ascending or descending order")):
+    
+    valid_fields = ["genre", "author"]
+
+    if sort_by not in valid_fields:
+        raise HTTPException(status_code=400, detail=f"Invalid field! Select from valid fields {valid_fields}")
+
+    if order not in ["asc", "desc"]:
+        raise HTTPException(status_code=400, detail="Invalid order! Select between ascending and descending")
+    
+    data = load_data()
+
+    books_list = data.get("books", [])
+
+    sort_order = True if order =="desc" else False
+
+    sorted_data = sorted(books_list, key=lambda x: x.get(sort_by, ""), reverse=sort_order)
+
+    return sorted_data
+    
