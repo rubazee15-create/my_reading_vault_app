@@ -1,5 +1,5 @@
 # Importing libraries
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 import json
 
 app = FastAPI()
@@ -26,5 +26,32 @@ def view_books():       # This endpoint will allow users to view all the books t
     data = load_data()
     return data
 
+# Including new operations to understand path parameters and query parameters in FastAPI.
+@app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
+def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0)):
+    # Loading all the books
+    data = load_data()
+
+    # Getting the actual list of books
+    books_list = data.get("books", [])
+
+    # Looping through to find the matching book ID
+    for book in books_list:
+        if book["id"] == book_id:
+            return book
+    return {'error':"Book not found!"}
 
 
+@app.get("/book_title/{book_title}")
+def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing")):
+    # Loading the data
+    data = load_data()
+
+    # Getting the list of the books
+    books_list = data.get("books", [])
+
+    for book in books_list:
+        if book_title.lower() in book["title"].lower():
+            return book
+        
+    return {'error': f"Book title: '{book_title}' not found"}
