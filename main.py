@@ -64,9 +64,9 @@ def view_book_title(book_title: str = Path(..., description="Add the Title of th
 
 # Query Parameters
 @app.get("/sort")
-def sort_books(sort_by: str = Query(..., description="Sort on the basis of genre and authors"), order: str = Query("asc", description= "Sort in ascending or descending order")):
+def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), order: str = Query("asc", description= "Sort in ascending or descending order")):
     
-    valid_fields = ["genre", "author"]
+    valid_fields = ["total_pages"]
 
     if sort_by not in valid_fields:
         raise HTTPException(status_code=400, detail=f"Invalid field! Select from valid fields {valid_fields}")
@@ -83,4 +83,6 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of genre
     sorted_data = sorted(books_list, key=lambda x: x.get(sort_by, ""), reverse=sort_order)
 
     return sorted_data
+
+
     
