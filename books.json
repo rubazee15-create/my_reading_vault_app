@@ -30,34 +30,40 @@
             "title": "Pride & Prejudice",
             "author": "Jane Austen",
             "genre": "Romance",
-            "status": "completed",
-            "pages_read": 384,
+            "status": "not read",
+            "pages_read": 0,
             "total_pages": 384,
-            "rating": 5,
+            "rating": 0,
             "date_started": "5-10-2020",
-            "date_finished": "15-10-2020"
+            "date_finished": "15-10-2020",
+            "pages_left": 384,
+            "progress_percentage": 0.0
         },
         "4": {
             "title": "Yellowface",
             "author": "R.F. Kuang",
             "genre": "Literary Thriller",
-            "status": "not read",
-            "pages_read": 0,
+            "status": "reading",
+            "pages_read": 100,
             "total_pages": 319,
-            "rating": null,
+            "rating": 2,
             "date_started": null,
-            "date_finished": null
+            "date_finished": null,
+            "pages_left": 219,
+            "progress_percentage": 31.35
         },
         "5": {
             "title": "My Feudal Lord",
             "author": "Tehmina Durrani",
             "genre": "Biography",
             "status": "reading",
-            "pages_read": 94,
+            "pages_read": 130,
             "total_pages": 384,
-            "rating": null,
+            "rating": 5,
             "date_started": "12-12-2025",
-            "date_finished": null
+            "date_finished": null,
+            "pages_left": 254,
+            "progress_percentage": 33.85
         },
         "6": {
             "title": "Onyx Storm",

@@ -39,23 +39,33 @@ class Book(BaseModel):
         progress_percentage = round((self.pages_read / self.total_pages) * 100, 2)
         return progress_percentage
 
-# Second Pydantic model for PUT (Update) function
-# Not passing ID as we are asking for it as a Path Parameter, so it will not be a part of the request body
-class BookUpdate(BaseModel):
-    title: Annotated[Optional [str], Field(default=None)]
-    author: Annotated[Optional [str], Field(default=None)]
-    genre: Annotated[Optional [str], Field(default=None)]
+# # Second Pydantic model for PUT (Update) function
+# # Not passing ID as we are asking for it as a Path Parameter, so it will not be a part of the request body
+# class BookUpdate(BaseModel):
+#     title: Annotated[Optional [str], Field(default=None)]
+#     author: Annotated[Optional [str], Field(default=None)]
+#     genre: Annotated[Optional [str], Field(default=None)]
     
-    status: Annotated[Optional [Literal["completed", "not read", "reading"]], Field(default=None)]
+#     status: Annotated[Optional [Literal["completed", "not read", "reading"]], Field(default=None)]
     
-    pages_read: Annotated[Optional [int], Field(default=None)]
-    total_pages: Annotated[Optional [int], Field(default=None)]
+#     pages_read: Annotated[Optional [int], Field(default=None)]
+#     total_pages: Annotated[Optional [int], Field(default=None)]
     
-    # Optional fields 
-    rating: Annotated[Optional[int], Field(default=None, gte=0, lte=5)]
-    date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYY)")]
-    date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYY)")]
+#     # Optional fields 
+#     rating: Annotated[Optional[int], Field(default=None, gte=0, lte=5)]
+#     date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYY)")]
+#     date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYY)")]
 
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    genre: Optional[str] = None
+    status: Optional[Literal["completed", "not read", "reading"]] = None
+    pages_read: Optional[int] = None
+    total_pages: Optional[int] = None
+    rating: Optional[int] = Field(default=None, gte=0, lte=5)
+    date_started: Optional[str] = None
+    date_finished: Optional[str] = None
 
 # Before making the endpoints we have to make a function to load the data in the books.json file because we will be using that data in the endpoints.
 def load_data():
@@ -171,40 +181,40 @@ def create_book(book: Book):
 def update_book(book_id: int, book_update: BookUpdate):
     # Loading the data
     data = load_data()
-    
-    # Checking if the 'patient_id' exists in the existing data
-    if book_id not in data:
+    book_id_str = str(book_id)
+
+    # Checking if the 'book_id_str' exists in the existing data
+    if book_id_str not in data["books"]:
         raise HTTPException (status_code=404, detail="Book not found!")
     
-    # If the 'patient_id' is correct - e.g. 1 (then all the existing data of book having id 1 will be extracted)
-    # Updating the values of status, pages_read and rating - for that we will have t convert 'book_update' which is a pydantic object into a dictionary
-    existing_book_info = data(book_id)  # Contains all the fields 
+    # If the 'book_id_str' is correct - e.g. 1 (then all the existing data of book having id 1 will be extracted)
+    # Updating the values of status, pages_read and rating - for that we will have to convert 'book_update' which is a pydantic object into a dictionary
+    existing_book_info = data["books"][book_id_str]  # Contains all the fields 
 
     # Converting 'book_update' into a dictionary
     updated_book_info = book_update.model_dump(exclude_unset=True)   # By adding 'exclude_unset=True', rather than getting all the fields, we will only get the items we want i.e. status, pages_read and rating
     
-    # Loop on 'updated_book_info' - loop will run 3 times as there are 3 items (status, pages_read and rating)
+    # Loop through the 'updated_book_info' - loop will run 3 times as there are 3 items (status, pages_read and rating)
     # When the loop will run 3 times, each time the item in the 'key' will change - that's how the loop will run
-    for key, value in updated_book_info.items():   # key is the item i.e. status.pages_read and rating whereas the value is the updated version of the specific key i.e. from not read to completed, from 0 - 400, from 4 - 5
+    for key, value in updated_book_info.items():   # key is the item i.e. status, pages_read and rating whereas the value is the updated version of the specific key i.e. from not read to completed, from 0 - 400, from 4 - 5
         # But making changes in 'existing_book_info'
         existing_book_info[key] = value
 
-        # Now building a logic that as the pages_read updates the values of the pages_left and progress_percentage should automatically get updated as well
-        # For that to occur, the existing_book info shall be converted into a Pydantic object
-        # existing_book_info -> pydantic object (using the first Pydantic Model (Book) -> updated pages_left + progress_percentage
-        existing_book_info['id'] = book_id  # Added book 'id' field in the 'exisitng_book_info' as it was not included previously
-        book_pydantic_object = Book(**existing_book_info)
+    # Now building the logic to update the calculated fields (as the pages_read updates, the values of pages_left and progress_percentage should automatically get updated as well)
+    # For that to occur, the existing_book info shall be converted into a Pydantic object
+    # existing_book_info -> pydantic object (using the first Pydantic Model (Book) -> updated pages_left + progress_percentage
+    existing_book_info['id'] = book_id  # Added book 'id' field in the 'exisitng_book_info' as it was not included previously
+    book_pydantic_object = Book(**existing_book_info)
         
-        # -> pydantic object -> dict
-        existing_book_info = book_pydantic_object.model_dump(exclude="id")  # excluding the 'id' as it will already be present 
+    # -> pydantic object -> dict
+    # Updating the main data dictionary
+    data["books"][book_id_str] = book_pydantic_object.model_dump(exclude={"id"})  # excluding the 'id' as it will already be present 
 
-        # Adding this new dictionary to the database
-        data[book_id] = existing_book_info
+    # Save data and return outside of the loop
+    save_data(data)
 
-        # save data
-        save_data(data)
-
-        return JSONResponse(status_code=200, content={"message":"Book updated successfully!"})
+    return JSONResponse(status_code=200, content={"message":"Book updated successfully!"})
+    
 
 
 
