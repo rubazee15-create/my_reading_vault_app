@@ -182,8 +182,29 @@ def update_book(book_id: int, book_update: BookUpdate):
 
     # Converting 'book_update' into a dictionary
     updated_book_info = book_update.model_dump(exclude_unset=True)   # By adding 'exclude_unset=True', rather than getting all the fields, we will only get the items we want i.e. status, pages_read and rating
+    
+    # Loop on 'updated_book_info' - loop will run 3 times as there are 3 items (status, pages_read and rating)
+    # When the loop will run 3 times, each time the item in the 'key' will change - that's how the loop will run
+    for key, value in updated_book_info.items():   # key is the item i.e. status.pages_read and rating whereas the value is the updated version of the specific key i.e. from not read to completed, from 0 - 400, from 4 - 5
+        # But making changes in 'existing_book_info'
+        existing_book_info[key] = value
 
+        # Now building a logic that as the pages_read updates the values of the pages_left and progress_percentage should automatically get updated as well
+        # For that to occur, the existing_book info shall be converted into a Pydantic object
+        # existing_book_info -> pydantic object (using the first Pydantic Model (Book) -> updated pages_left + progress_percentage
+        existing_book_info['id'] = book_id  # Added book 'id' field in the 'exisitng_book_info' as it was not included previously
+        book_pydantic_object = Book(**existing_book_info)
+        
+        # -> pydantic object -> dict
+        existing_book_info = book_pydantic_object.model_dump(exclude="id")  # excluding the 'id' as it will already be present 
 
+        # Adding this new dictionary to the database
+        data[book_id] = existing_book_info
+
+        # save data
+        save_data(data)
+
+        return JSONResponse(status_code=200, content={"message":"Book updated successfully!"})
 
 
 
