@@ -64,19 +64,6 @@
             "date_finished": null,
             "pages_left": 254,
             "progress_percentage": 33.85
-        },
-        "6": {
-            "title": "Onyx Storm",
-            "author": "Rebecca Yarros",
-            "genre": "Fantasy",
-            "status": "not read",
-            "pages_read": 0,
-            "total_pages": 414,
-            "rating": 0,
-            "date_started": "null",
-            "date_finished": "null",
-            "pages_left": 414,
-            "progress_percentage": 0.0
         }
     }
 }

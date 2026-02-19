@@ -215,6 +215,24 @@ def update_book(book_id: int, book_update: BookUpdate):
 
     return JSONResponse(status_code=200, content={"message":"Book updated successfully!"})
     
+# Making a DELETE endpoint
+@app.delete("/delete/{book_id}")
+def delete_book(book_id: int):
+    # Loading the data
+    data = load_data()
 
+    # Converting book_id from integer to string
+    book_id_str = str(book_id)
+
+    # Checking inside the 'books' key specifically
+    if book_id_str not in data["books"]:
+        raise HTTPException(status_code=404, detail="Book not found!")
+    
+    # Deleting book_id_str from the exisitig data
+    del data["books"][book_id_str]
+
+    # Saving the data and returning the JSON response
+    save_data(data)
+    return JSONResponse(status_code=200, content={"message":"Book deleted successfully!"})
 
 
