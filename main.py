@@ -7,7 +7,7 @@ import json
 
 app = FastAPI()
 
-# Making a class that will inheret the base model
+# Making a class that will inheret the base model - Making a Pydantic model for creating new book in the database (JSON file)
 class Book(BaseModel):
     # Building fields that are required to create a Book (e.g. refer to books.json fields) - with description and annotations
     id: Annotated[int, Field(..., description="Book ID", example=1)]
@@ -21,9 +21,9 @@ class Book(BaseModel):
     total_pages: Annotated[int, Field(..., gt=0, description="Total number of pages of the book", example=544)]
     
     # Optional fields 
-    rating: Annotated[Optional[int], Field(None, gte=0, lte=5, description="Total rating of the book out of 5", examples=[4])]
-    date_started: Annotated[Optional[str], Field(None, description="Starting date (DD-MM-YYY)", example="12-12-2025")]
-    date_finished: Annotated[Optional[str], Field(None, description="Finsih date (DD-MM-YYY)", example="17-12-2025")]
+    rating: Annotated[Optional[int], Field(default=None, gte=0, lte=5, description="Total rating of the book out of 5", examples=[4])]
+    date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYY)", example="12-12-2025")]
+    date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYY)", example="17-12-2025")]
 
     # Adding more computed fields to make the app more user friendly
     @computed_field
@@ -38,7 +38,25 @@ class Book(BaseModel):
         # Calculating the progress percentage and rounding it to 2 decimal places for better readability
         progress_percentage = round((self.pages_read / self.total_pages) * 100, 2)
         return progress_percentage
+
+# Second Pydantic model for PUT (Update) function
+# Not passing ID as we are asking for it as a Path Parameter, so it will not be a part of the request body
+class BookUpdate(BaseModel):
+    title: Annotated[Optional [str], Field(default=None)]
+    author: Annotated[Optional [str], Field(default=None)]
+    genre: Annotated[Optional [str], Field(default=None)]
     
+    status: Annotated[Optional [Literal["completed", "not read", "reading"]], Field(default=None)]
+    
+    pages_read: Annotated[Optional [int], Field(default=None)]
+    total_pages: Annotated[Optional [int], Field(default=None)]
+    
+    # Optional fields 
+    rating: Annotated[Optional[int], Field(default=None, gte=0, lte=5)]
+    date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYY)")]
+    date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYY)")]
+
+
 # Before making the endpoints we have to make a function to load the data in the books.json file because we will be using that data in the endpoints.
 def load_data():
     with open("books.json", "r") as file:
@@ -52,7 +70,7 @@ def save_data(data):
         json.dump(data, file, indent=4)
 
 # Creating our endpoints - Staring with the basic ones and then moving to the more complex ones.
-# Starting with GET endpoints to view the data in the JSON file and then moving to POST endpoint to create a new book and add it to the JSON file.
+# Starting with GET (Retrieve) endpoints to view the data in the JSON file and then moving to POST endpoint to create a new book and add it to the JSON file.
 @app.get("/")           # This endpoint will be the root endpoint of our API and will return a simple message to indicate that the API is working.
 def hello():
     return {"message": "Reading Tracker API is up and running!"}
@@ -122,7 +140,7 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'tota
     return sorted_data
 
 # Making an endpoint for the fields we entered in the class with the help of Pydantic model
-# Making a POST endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
+# Making a POST (Create) endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
 @app.post("/create")
 def create_book(book: Book):
     # Loading the existing data
@@ -146,4 +164,26 @@ def create_book(book: Book):
     return JSONResponse(status_code=201, content={"message": "Book created successfully!"})
 
 # Adding more endpoints
-# Making an UPDATE endpoint to update the existing book's data in the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will update that data in the JSON file using the save_data function. We will also check if the book exists in the JSON file before updating it to avoid errors.
+# Making a PUT (Update) endpoint to update the existing book's data in the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will update that data in the JSON file using the save_data function. We will also check if the book exists in the JSON file before updating it to avoid errors.
+# First, a new Pydantic model will be made so that all the fields made this time become Optional instead of Required
+# The new Pydantic model is made right below the first Pydantic model 
+@app.put("/edit/{book_id}")
+def update_book(book_id: int, book_update: BookUpdate):
+    # Loading the data
+    data = load_data()
+    
+    # Checking if the 'patient_id' exists in the existing data
+    if book_id not in data:
+        raise HTTPException (status_code=404, detail="Book not found!")
+    
+    # If the 'patient_id' is correct - e.g. 1 (then all the existing data of book having id 1 will be extracted)
+    # Updating the values of status, pages_read and rating - for that we will have t convert 'book_update' which is a pydantic object into a dictionary
+    existing_book_info = data(book_id)  # Contains all the fields 
+
+    # Converting 'book_update' into a dictionary
+    updated_book_info = book_update.model_dump(exclude_unset=True)   # By adding 'exclude_unset=True', rather than getting all the fields, we will only get the items we want i.e. status, pages_read and rating
+
+
+
+
+
