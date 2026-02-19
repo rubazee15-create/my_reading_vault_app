@@ -51,7 +51,8 @@ def save_data(data):
     with open("books.json", "w") as file:
         json.dump(data, file, indent=4)
 
-# Creating our endpoints
+# Creating our endpoints - Staring with the basic ones and then moving to the more complex ones.
+# Starting with GET endpoints to view the data in the JSON file and then moving to POST endpoint to create a new book and add it to the JSON file.
 @app.get("/")           # This endpoint will be the root endpoint of our API and will return a simple message to indicate that the API is working.
 def hello():
     return {"message": "Reading Tracker API is up and running!"}
@@ -121,6 +122,7 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'tota
     return sorted_data
 
 # Making an endpoint for the fields we entered in the class with the help of Pydantic model
+# Making a POST endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
 @app.post("/create")
 def create_book(book: Book):
     # Loading the existing data
@@ -143,3 +145,5 @@ def create_book(book: Book):
     # Telling the client we have successfully conducted the creation process
     return JSONResponse(status_code=201, content={"message": "Book created successfully!"})
 
+# Adding more endpoints
+# Making an UPDATE endpoint to update the existing book's data in the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will update that data in the JSON file using the save_data function. We will also check if the book exists in the JSON file before updating it to avoid errors.
