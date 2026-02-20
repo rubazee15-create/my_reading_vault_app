@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "last_updated": "23-01-2026",
+        "last_updated": "20-02-2026",
         "total_books": 6
     },
     "books": {
@@ -64,6 +64,19 @@
             "date_finished": null,
             "pages_left": 254,
             "progress_percentage": 33.85
+        },
+        "6": {
+            "title": "Onyx Storm",
+            "author": "Rebecca Yarros",
+            "genre": "Fantasy",
+            "status": "reading",
+            "pages_read": 50,
+            "total_pages": 500,
+            "rating": 3,
+            "date_started": "null",
+            "date_finished": "null",
+            "pages_left": 450,
+            "progress_percentage": 10.0
         }
     }
 }

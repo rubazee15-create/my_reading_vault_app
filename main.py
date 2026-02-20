@@ -1,8 +1,9 @@
 # Importing libraries
 from fastapi import FastAPI, Path, HTTPException, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
+from datetime import date
 import json
 
 app = FastAPI()
@@ -17,13 +18,13 @@ class Book(BaseModel):
     
     status: Annotated[Literal["completed", "not read", "reading"], Field(..., description="Reading status of the book")]
     
-    pages_read: Annotated[int, Field(0, gte=0, description="Number of pages read of the book", example=544)]
+    pages_read: Annotated[int, Field(0, ge=0, description="Number of pages read of the book", example=544)]
     total_pages: Annotated[int, Field(..., gt=0, description="Total number of pages of the book", example=544)]
     
     # Optional fields 
-    rating: Annotated[Optional[int], Field(default=None, gte=0, lte=5, description="Total rating of the book out of 5", examples=[4])]
-    date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYY)", example="12-12-2025")]
-    date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYY)", example="17-12-2025")]
+    rating: Annotated[Optional[int], Field(default=None, ge=0, le=5, description="Total rating of the book out of 5", examples=[4])]
+    date_started: Annotated[Optional[str], Field(default=None, description="Starting date (DD-MM-YYYY)", example="12-12-2025")]
+    date_finished: Annotated[Optional[str], Field(default=None, description="Finsih date (DD-MM-YYYY)", example="17-12-2025")]
 
     # Adding more computed fields to make the app more user friendly
     @computed_field
@@ -38,6 +39,18 @@ class Book(BaseModel):
         # Calculating the progress percentage and rounding it to 2 decimal places for better readability
         progress_percentage = round((self.pages_read / self.total_pages) * 100, 2)
         return progress_percentage
+    
+    # Adding a model validator to Book
+    @model_validator(mode="after")
+    def check_status_dates(self):
+        if self.status == "completed" and not self.date_finished:
+            raise ValueError("Completed books require a finished date")
+        if self.status == "not read" and self.pages_read > 0:
+            raise ValueError("Unread books should have 0 pages read")
+        # Preventing from entering read_pages exceeding the total_pages
+        if self.pages_read > self.total_pages:
+            raise ValueError("pages read can not exceed total pages")
+        return self
 
 # # Second Pydantic model for PUT (Update) function
 # # Not passing ID as we are asking for it as a Path Parameter, so it will not be a part of the request body
@@ -61,9 +74,9 @@ class BookUpdate(BaseModel):
     author: Optional[str] = None
     genre: Optional[str] = None
     status: Optional[Literal["completed", "not read", "reading"]] = None
-    pages_read: Optional[int] = None
-    total_pages: Optional[int] = None
-    rating: Optional[int] = Field(default=None, gte=0, lte=5)
+    pages_read: Optional[int] = Field(default=None, ge=0)
+    total_pages: Optional[int] = Field(default=None, gt=0)
+    rating: Optional[int] = Field(default=None, ge=0, le=5)
     date_started: Optional[str] = None
     date_finished: Optional[str] = None
 
@@ -131,7 +144,7 @@ def view_book_title(book_title: str = Path(..., description="Add the Title of th
 @app.get("/sort")
 def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), order: str = Query("asc", description= "Sort in ascending or descending order")):
     
-    valid_fields = ["total_pages"]
+    valid_fields = ["total_pages", "rating", "author", "genre"]
 
     if sort_by not in valid_fields:
         raise HTTPException(status_code=400, detail=f"Invalid field! Select from valid fields {valid_fields}")
@@ -166,6 +179,7 @@ def create_book(book: Book):
     
     data["books"][book_id_str] = book.model_dump(exclude={"id"})
     data["metadata"]["total_books"] = len(data["books"])
+    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y")  
 
     # Saving the new book's data in the JSON file 
     save_data(data)
@@ -209,6 +223,7 @@ def update_book(book_id: int, book_update: BookUpdate):
     # -> pydantic object -> dict
     # Updating the main data dictionary
     data["books"][book_id_str] = book_pydantic_object.model_dump(exclude={"id"})  # excluding the 'id' as it will already be present 
+    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y") 
 
     # Save data and return outside of the loop
     save_data(data)
@@ -230,9 +245,11 @@ def delete_book(book_id: int):
     
     # Deleting book_id_str from the exisitig data
     del data["books"][book_id_str]
+    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y")
 
     # Saving the data and returning the JSON response
     save_data(data)
     return JSONResponse(status_code=200, content={"message":"Book deleted successfully!"})
+
 
 
