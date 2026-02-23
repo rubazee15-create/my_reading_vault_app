@@ -63,7 +63,7 @@ Following the modular approach:
 ## **🟠 Phase 3: Enhanced Features & Analytics**
 * [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
 * [ ] Reading Progress API: Logic to calculate percentage read:
-  $$\text{Progress} = \left( \frac{\text{pages\_read}}{\text{total\_pages}} \right) \times 100$$
+  $$\text{Progress} = \left( \frac{\text{pages_read}}{\text{total_pages}} \right) \times 100$$
 * [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
 * [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
 
