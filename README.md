@@ -15,8 +15,6 @@ The Reading Vault is a digital tracker designed to help users manage their readi
 ### 📂 Project Structure
 Following the modular approach:
 
-Following the modular approach:
-
 ```text
 ├── main.py           # App entry point
 ├── models.py         # SQLAlchemy database models
@@ -65,7 +63,7 @@ Following the modular approach:
 
 ## **🟠 Phase 3: Enhanced Features & Analytics**
 * [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
-* [ ] Reading Progress API: Logic to calculate percentage read
+* [ ] Reading Progress API: Logic to calculate percentage read.
 * [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
 * [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
 
