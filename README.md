@@ -6,6 +6,8 @@ The Reading Vault is a digital tracker designed to help users manage their readi
 
 ### 🛠️ Tech Stack
 * **Framework:** FastAPI
+* **Database:** PostgreSQL
+* **ORM:** SQLAlchemy
 * **Server:** Uvicorn
 * **Language:** Python
 * **Validation:** Pydantic 
@@ -13,11 +15,13 @@ The Reading Vault is a digital tracker designed to help users manage their readi
 ### 📂 Project Structure
 Following the modular approach:
 
-├── main.py          
-├── models.py        
-├── schemas.py       
-├── database.py      
-└── crud.py          
+├── main.py          # App entry point
+├── models.py        # SQLAlchemy database models
+├── database.py      # Database connection & SessionLocal
+├── migrate.py       # Script to migrate JSON data to Postgres
+├── books.json       # (Legacy) Source data for migration
+├── requirements.txt 
+└── ...      
 
 ### ⚙️ Installation & Setup
 
@@ -44,9 +48,29 @@ Following the modular approach:
 * Interactive Swagger UI: http://127.0.0.1:8000/docs
 
 ### 📈 Roadmap
-* Implement User Authentication (OAuth2)
-* Add "Reading Progress" percentage tracking.
-* Integrate a third-party Book API for auto-filling book details.
- 
+## **🟢 Phase 1: Foundation & Persistence (Completed)**
+* [x] Basic CRUD operations for Books.
+* [x] Data validation with Pydantic.
+* [x] Database Migration: Transitioned from books.json to PostgreSQL.
+* [x] ORM Integration: Implemented SQLAlchemy for database interactions.
+
+## **🟡 Phase 2: Security & Relationships (Current)** 
+* [ ] User Authentication: Implement OAuth2 with JWT (JSON Web Tokens).
+* [ ] Multi-Tenancy: Associate books with specific user IDs so users only see their own library.
+* [ ] Database Migrations: Integrate Alembic to handle schema changes without losing data.
+* [ ] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
+
+## **🟠 Phase 3: Enhanced Features & Analytics**
+* [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
+* [ ] Reading Progress API: Logic to calculate percentage read:
+  $$\text{Progress} = \left( \frac{\text{pages\_read}}{\text{total\_pages}} \right) \times 100$$
+* [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
+* [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
+
+## **🔴 Phase 4: Scaling & DevOps**
+* [ ] Unit Testing: Achieve 80%+ coverage using pytest and a separate test database.
+* [ ] Containerization: Create a docker-compose.yml to spin up the FastAPI app and Postgres DB instantly.
+* [ ] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
+* [ ] CI/CD Pipeline: Set up GitHub Actions to run tests automatically on every push.
    
    
