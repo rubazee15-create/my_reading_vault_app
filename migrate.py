@@ -3,7 +3,7 @@ import json
 from database import SessionLocal
 from models import Book
 
-# Load your existing books.json
+# Loading the existing 'books.json'
 with open("books.json", "r") as f:
     data = json.load(f)
 

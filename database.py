@@ -6,7 +6,7 @@ DATABASE_URL = "postgresql://vault_user:7822@localhost:5432/reading_vault"
 # Creating the connection to PostgreSQL
 engine = create_engine(DATABASE_URL)
 
-# This is what we'll use to talk to the database in our endpoints
+# This is what will be used to talk to the database in the endpoints in the 'main.py' file
 SessionLocal = sessionmaker(bind=engine)
 
 # Base class — all the database table models will inherit from this
