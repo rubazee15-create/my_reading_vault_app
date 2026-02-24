@@ -1,9 +1,12 @@
 # Importing libraries
-from fastapi import FastAPI, Path, HTTPException, Query
+from fastapi import FastAPI, Path, HTTPException, Query, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
 from datetime import date
+from sqlalchemy.orm import Session
+from database import get_db
+from models import Book as BookModel
 import json
 
 app = FastAPI()
@@ -49,7 +52,7 @@ class Book(BaseModel):
             raise ValueError("Unread books should have 0 pages read")
         # Preventing from entering read_pages exceeding the total_pages
         if self.pages_read > self.total_pages:
-            raise ValueError("pages read can not exceed total pages")
+            raise ValueError("Pages read can not exceed total pages")
         return self
 
 # # Second Pydantic model for PUT (Update) function
@@ -80,18 +83,21 @@ class BookUpdate(BaseModel):
     date_started: Optional[str] = None
     date_finished: Optional[str] = None
 
-# Before making the endpoints we have to make a function to load the data in the books.json file because we will be using that data in the endpoints.
-def load_data():
-    with open("books.json", "r") as file:
-        data = json.load(file)
 
-    return data  
+# # Before making the endpoints we have to make a function to load the data in the books.json file because we will be using that data in the endpoints.
+# def load_data():
+#     with open("books.json", "r") as file:
+#         data = json.load(file)
 
-# Saving the new book's data in the exisiting 'books.json' file 
-def save_data(data):
-    with open("books.json", "w") as file:
-        json.dump(data, file, indent=4)
+#     return data  
 
+# # Saving the new book's data in the exisiting 'books.json' file 
+# def save_data(data):
+#     with open("books.json", "w") as file:
+#         json.dump(data, file, indent=4)
+
+
+# ENDPOINTS
 # Creating our endpoints - Staring with the basic ones and then moving to the more complex ones.
 # Starting with GET (Retrieve) endpoints to view the data in the JSON file and then moving to POST endpoint to create a new book and add it to the JSON file.
 @app.get("/")           # This endpoint will be the root endpoint of our API and will return a simple message to indicate that the API is working.
@@ -103,46 +109,34 @@ def about():            # This endpoint will provide information about the API a
     return {"message": "This is a fully functional API to track and manage your reading habits."}
 
 @app.get("/view_books")
-def view_books():       # This endpoint will allow users to view all the books they have added to their reading vault.
-    # We will fetch the data using the load_data function and return all the books data as a response to the client.
-    data = load_data()
-    return data
+def view_books(db: Session = Depends(get_db)):  # This endpoint will allow users to view all the books they have added to their reading vault.
+    books = db.query(BookModel).all()
+    return books
 
 # Including new operations to understand path parameters and query parameters in FastAPI.
 
 # Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
-def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0)):
-    # Loading all the books
-    data = load_data()
-
-    # Getting the actual dictionary of books
-    books_dict = data.get("books", {})
+def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0), db: Session = Depends(get_db)):
     
-    book = books_dict.get(str(book_id))
+    book = db.query(BookModel).filter(BookModel.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found!")
     return book
 
 @app.get("/book_title/{book_title}")
-def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing")):
-    # Loading the data
-    data = load_data()
-
-    # Getting the dictionary of the books
-    books_dict = data.get("books", {})
-
-    for book in books_dict.values():
-        if book_title.lower() in book["title"].lower():
-            return book
-        
-    # return {'error': f"Book title: '{book_title}' not found"}
-    # HTTP Exception with status code:
-    raise HTTPException(status_code=404, detail="Book Title not found!")
+def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing"), db: Session = Depends(get_db)):
+    book = db.query(BookModel).filter(BookModel.title.ilike(f"%{book_title}%")).first()
+    if not book:
+        raise HTTPException(status_code=400, detail="Book title not found!")
+    return book
 
 # Query Parameters
 @app.get("/sort")
-def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), order: str = Query("asc", description= "Sort in ascending or descending order")):
+def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), 
+               order: str = Query("asc", description= "Sort in ascending or descending order"),
+               db: Session = Depends(get_db)
+               ):
     
     valid_fields = ["total_pages", "rating", "author", "genre"]
 
@@ -152,37 +146,37 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'tota
     if order not in ["asc", "desc"]:
         raise HTTPException(status_code=400, detail="Invalid order! Select between ascending and descending")
     
-    data = load_data()
+    column = getattr(BookModel, sort_by)
+    if order == "desc":
+        column = column.desc()
 
-    books_list = list(data.get("books", {}).values())
-
-    sort_order = True if order =="desc" else False
-
-    sorted_data = sorted(books_list, key=lambda x: x.get(sort_by, ""), reverse=sort_order)
-
-    return sorted_data
+    books = db.query(BookModel).order_by(column).all()
+    return books
 
 # Making an endpoint for the fields we entered in the class with the help of Pydantic model
 # Making a POST (Create) endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
 @app.post("/create")
-def create_book(book: Book):
-    # Loading the existing data
-    data = load_data()
-    book_id_str = str(book.id)
-
-    # Checking if the book already exists 
-    if book_id_str in data["books"]:
-        raise HTTPException(status_code=400, detail="Book already exists in the Database")
+def create_book(book: Book, db: Session = Depends(get_db)):
+    existing = db.query(BookModel).filter(BookModel.id == book.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Book already exists!")
     
-    # Creating a new key 'book.id' - Adding new book to the exisiting Database
-    # data[book.id] = book.model_dump(exclude={"id"})    # As all the content/values of each book are avaiable in the key 'id'.
-    
-    data["books"][book_id_str] = book.model_dump(exclude={"id"})
-    data["metadata"]["total_books"] = len(data["books"])
-    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y")  
-
-    # Saving the new book's data in the JSON file 
-    save_data(data)
+    # Creating new book
+    new_book = BookModel(
+        id=book.id,
+        title=book.title,
+        author=book.author,
+        genre=book.genre,
+        status=book.status,
+        pages_read=book.pages_read,
+        total_pages=book.total_pages,
+        rating=book.rating,
+        date_started=book.date_started,
+        date_finished=book.date_finished
+    )
+    db.add(new_book)
+    db.commit()
+    db.refresh(new_book)
 
     # Telling the client we have successfully conducted the creation process
     return JSONResponse(status_code=201, content={"message": "Book created successfully!"})
@@ -192,63 +186,28 @@ def create_book(book: Book):
 # First, a new Pydantic model will be made so that all the fields made this time become Optional instead of Required
 # The new Pydantic model is made right below the first Pydantic model 
 @app.put("/edit/{book_id}")
-def update_book(book_id: int, book_update: BookUpdate):
-    # Loading the data
-    data = load_data()
-    book_id_str = str(book_id)
-
-    # Checking if the 'book_id_str' exists in the existing data
-    if book_id_str not in data["books"]:
-        raise HTTPException (status_code=404, detail="Book not found!")
-    
-    # If the 'book_id_str' is correct - e.g. 1 (then all the existing data of book having id 1 will be extracted)
-    # Updating the values of status, pages_read and rating - for that we will have to convert 'book_update' which is a pydantic object into a dictionary
-    existing_book_info = data["books"][book_id_str]  # Contains all the fields 
-
-    # Converting 'book_update' into a dictionary
-    updated_book_info = book_update.model_dump(exclude_unset=True)   # By adding 'exclude_unset=True', rather than getting all the fields, we will only get the items we want i.e. status, pages_read and rating
-    
-    # Loop through the 'updated_book_info' - loop will run 3 times as there are 3 items (status, pages_read and rating)
-    # When the loop will run 3 times, each time the item in the 'key' will change - that's how the loop will run
-    for key, value in updated_book_info.items():   # key is the item i.e. status, pages_read and rating whereas the value is the updated version of the specific key i.e. from not read to completed, from 0 - 400, from 4 - 5
-        # But making changes in 'existing_book_info'
-        existing_book_info[key] = value
-
-    # Now building the logic to update the calculated fields (as the pages_read updates, the values of pages_left and progress_percentage should automatically get updated as well)
-    # For that to occur, the existing_book info shall be converted into a Pydantic object
-    # existing_book_info -> pydantic object (using the first Pydantic Model (Book) -> updated pages_left + progress_percentage
-    existing_book_info['id'] = book_id  # Added book 'id' field in the 'exisitng_book_info' as it was not included previously
-    book_pydantic_object = Book(**existing_book_info)
-        
-    # -> pydantic object -> dict
-    # Updating the main data dictionary
-    data["books"][book_id_str] = book_pydantic_object.model_dump(exclude={"id"})  # excluding the 'id' as it will already be present 
-    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y") 
-
-    # Save data and return outside of the loop
-    save_data(data)
-
-    return JSONResponse(status_code=200, content={"message":"Book updated successfully!"})
-    
-# Making a DELETE endpoint
-@app.delete("/delete/{book_id}")
-def delete_book(book_id: int):
-    # Loading the data
-    data = load_data()
-
-    # Converting book_id from integer to string
-    book_id_str = str(book_id)
-
-    # Checking inside the 'books' key specifically
-    if book_id_str not in data["books"]:
+def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db)):
+    book = db.query(BookModel).filter(BookModel.id == book_id).first()
+    if not book:
         raise HTTPException(status_code=404, detail="Book not found!")
     
-    # Deleting book_id_str from the exisitig data
-    del data["books"][book_id_str]
-    data["metadata"]["last_updated"] = date.today().strftime("%d-%m-%Y")
+    updated_fields = book_update.model_dump(exclude_unset=True)
+    for key, value in updated_fields.items():
+        setattr(book, key, value)
 
-    # Saving the data and returning the JSON response
-    save_data(data)
+    db.commit()
+    db.refresh(book)
+    return JSONResponse(status_code=200, content={"message": "Book updated successfully!"})
+
+# Making a DELETE endpoint
+@app.delete("/delete/{book_id}")
+def delete_book(book_id: int, db: Session = Depends(get_db)):
+    book = db.query(BookModel).filter(BookModel.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found!")
+
+    db.delete(book)
+    db.commit()
     return JSONResponse(status_code=200, content={"message":"Book deleted successfully!"})
 
 
