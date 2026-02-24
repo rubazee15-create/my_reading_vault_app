@@ -1,15 +1,31 @@
 # Importing libraries
 from fastapi import FastAPI, Path, HTTPException, Query, Depends
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
 from datetime import date
 from sqlalchemy.orm import Session
-from database import get_db
-from models import Book as BookModel
+from backend.database import get_db
+from backend.models import Book as BookModel
 import json
 
 app = FastAPI()
+
+# Preparing the backend - CORS(Cross-Origin Resource Sharing)
+# Defining who is allowed to talk to my API 
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],    # Allows GET, POST, PUT, DELETE etc.
+    allow_headers=["*"],    # Allows all extra information sent in the requests
+)
 
 # Making a class that will inheret the base model - Making a Pydantic model for creating new book in the database (JSON file)
 class Book(BaseModel):
