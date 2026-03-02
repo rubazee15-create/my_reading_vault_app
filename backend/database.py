@@ -1,7 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from dotenv import load_dotenv
+import os 
 
-DATABASE_URL = "postgresql://vault_user:7822@localhost:5432/reading_vault"
+# Loading environment variables from .env file
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Creating the connection to PostgreSQL
 engine = create_engine(DATABASE_URL)
