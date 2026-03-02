@@ -55,19 +55,25 @@ Following the modular approach:
 * [x] Database Migration: Transitioned from books.json to PostgreSQL.
 * [x] ORM Integration: Implemented SQLAlchemy for database interactions.
 
-#### **🟡 Phase 2: Security & Relationships (Current)** 
+#### **🔵 Phase 2: Frontend Interface (Current)**
+
+* [x] React UI with book cards and progress tracking
+* [x] Bookshelf visualization
+* [x] Reading goals, heatmap, challenges
+
+#### **🟡 Phase 3: Security & Relationships** 
 * [ ] User Authentication: Implement OAuth2 with JWT (JSON Web Tokens).
 * [ ] Multi-Tenancy: Associate books with specific user IDs so users only see their own library.
 * [ ] Database Migrations: Integrate Alembic to handle schema changes without losing data.
 * [ ] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
 
-#### **🟠 Phase 3: Enhanced Features & Analytics**
+#### **🟠 Phase 4: Enhanced Features & Analytics**
 * [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
 * [ ] Reading Progress API: Logic to calculate percentage read.
 * [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
 * [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
 
-#### **🔴 Phase 4: Scaling & DevOps**
+#### **🔴 Phase 5: Scaling & DevOps**
 * [ ] Unit Testing: Achieve 80%+ coverage using pytest and a separate test database.
 * [ ] Containerization: Create a docker-compose.yml to spin up the FastAPI app and Postgres DB instantly.
 * [ ] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
