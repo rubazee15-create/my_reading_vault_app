@@ -40,3 +40,16 @@
 .read-the-docs {
   color: #888;
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Change fade-in to fadein */
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* You can still keep this helper class if you want to use it manually */
+.animate-fade-in {
+  animation: fadein 0.5s ease-out forwards;
+}
