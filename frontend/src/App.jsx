@@ -277,7 +277,7 @@ function Bookshelf({ books, selectedBook, onSelect }) {
       {/* Legend */}
       <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '10px', paddingBottom: '4px' }}>
         {[['#fbbf24','Reading'],['#56b93a','Completed'],['#cc1f1f','Not Read']].map(([color, label]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'sans-serif' }}>
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: 'rgba(255, 255, 255, 0.88)', fontFamily: 'sans-serif' }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, boxShadow: `0 0 4px ${color}` }} />
             {label}
           </div>
@@ -307,23 +307,23 @@ function BookDetailPanel({ book, onClose, onEdit }) {
         <BookCover title={book.title} author={book.author} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ margin: '0 0 3px', fontSize: '1rem', fontFamily: "'Cormorant Garamond',serif", color: '#f1f0ff', lineHeight: 1.3 }}>{book.title}</h3>
-          <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>{book.author}</p>
+          <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'rgba(245, 244, 240, 0.91)', fontStyle: 'italic' }}>{book.author}</p>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.65rem', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '99px', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}>{cfg.label}</span>
-            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>{book.genre}</span>
+            <span style={{ fontSize: '0.72rem', color: 'rgba(245, 244, 240, 0.91)' }}>{book.genre}</span>
           </div>
           <Stars rating={book.rating} />
         </div>
       </div>
       <div style={{ marginTop: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
-          <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{book.pages_read} / {book.total_pages} · {pct}%</span>
+          <span style={{ fontSize: '0.72rem', color: 'rgba(245, 244, 240, 0.91)' }}>Progress</span>
+          <span style={{ fontSize: '0.72rem', color: 'rgba(245, 244, 240, 0.91)' }}>{book.pages_read} / {book.total_pages} · {pct}%</span>
         </div>
         <ProgressBar pct={pct} />
       </div>
       {(book.date_started || book.date_finished) && (
-        <div style={{ marginTop: '10px', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', display: 'flex', gap: '12px' }}>
+        <div style={{ marginTop: '10px', fontSize: '0.7rem', color: 'rgba(245, 244, 240, 0.91)', display: 'flex', gap: '12px' }}>
           {book.date_started && book.date_started !== 'null' && <span>Started {book.date_started}</span>}
           {book.date_finished && book.date_finished !== 'null' && <span>· Finished {book.date_finished}</span>}
         </div>
@@ -353,28 +353,27 @@ function BookCard({ book, onDelete, onEdit, style }) {
         <BookCover title={book.title} author={book.author} />
         <div style={{ flex:1, minWidth:0 }}>
           <h3 style={{ margin:'0 0 2px', fontSize:'1rem', fontWeight:'700', color:'#f1f0ff', fontFamily:"'Cormorant Garamond',serif", lineHeight:1.3 }}>{book.title}</h3>
-          <p style={{ margin:'0 0 10px', fontSize:'0.78rem', color:'rgba(255,255,255,0.45)', fontStyle:'italic' }}>{book.author}</p>
+          <p style={{ margin:'0 0 10px', fontSize:'0.78rem', color:'rgba(245, 244, 240, 0.91)', fontStyle:'italic' }}>{book.author}</p>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px', flexWrap:'wrap' }}>
             <span style={{ fontSize:'0.65rem', fontWeight:'700', letterSpacing:'0.08em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'99px', background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.color}33` }}>{cfg.label}</span>
-            <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.3)' }}>{book.genre}</span>
+            <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>{book.genre}</span>
           </div>
           <Stars rating={book.rating} />
         </div>
       </div>
       <div style={{ marginTop:'16px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
-          <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.4)' }}>Progress</span>
-          <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.5)' }}>{book.pages_read} / {book.total_pages} · {pct}%</span>
+          <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>Progress</span>
+          <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>{book.pages_read} / {book.total_pages} · {pct}%</span>
         </div>
         <ProgressBar pct={pct} />
       </div>
       {(book.date_started || book.date_finished) && (
-        <div style={{ marginTop:'12px', display:'flex', gap:'12px', fontSize:'0.7rem', color:'rgba(255,255,255,0.25)' }}>
+        <div style={{ marginTop:'12px', display:'flex', gap:'12px', fontSize:'0.7rem', color:'rgba(245, 244, 240, 0.91)' }}>
           {book.date_started && book.date_started !== 'null' && <span>Started {book.date_started}</span>}
           {book.date_finished && book.date_finished !== 'null' && <span>· Finished {book.date_finished}</span>}
         </div>
       )}
-      <div style={{ position:'absolute', bottom:'12px', right:'14px', fontSize:'0.62rem', color:'rgba(255,255,255,0.18)' }}>click to edit</div>
       <button onClick={e=>{ e.stopPropagation(); onDelete(book.id) }}
         style={{ position:'absolute', top:'14px', right:'14px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'8px', color:'rgba(255,255,255,0.25)', cursor:'pointer', fontSize:'0.7rem', padding:'3px 8px', transition:'all 0.2s' }}
         onMouseEnter={e=>{ e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='#f8717155' }}
@@ -400,12 +399,12 @@ function AddBookModal({ onClose, onAdded, nextId }) {
     setLoading(false)
   }
   const inp = { width:'100%', padding:'9px 12px', borderRadius:'10px', fontSize:'0.85rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'#f1f0ff', outline:'none', boxSizing:'border-box' }
-  const lbl = { fontSize:'0.72rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', display:'block', letterSpacing:'0.05em', textTransform:'uppercase' }
+  const lbl = { fontSize:'0.72rem', color:'#f1f0ff', marginBottom:'4px', display:'block', letterSpacing:'0.05em', textTransform:'uppercase' }
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:'20px' }} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{ background:'linear-gradient(135deg,#1a1030,#120d25)', border:'1px solid rgba(167,139,250,0.25)', borderRadius:'24px', padding:'32px', width:'100%', maxWidth:'480px', boxShadow:'0 0 60px rgba(167,139,250,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.8rem', color:'#f1f0ff', marginBottom:'6px' }}>Add a Book ✨</h2>
-        <p style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.25)', marginBottom:'20px' }}>ID will be assigned automatically</p>
+        <p style={{ fontSize:'0.75rem', color:'#f1f0ff', marginBottom:'20px' }}>ID will be assigned automatically</p>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
           {[['title','Title *','text'],['author','Author *','text'],['genre','Genre *','text'],['total_pages','Total Pages *','number'],['pages_read','Pages Read','number'],['rating','Rating (0–5)','number'],['date_started','Date Started (DD-MM-YYYY)','text'],['date_finished','Date Finished (DD-MM-YYYY)','text']].map(([k,l,type])=>(
             <div key={k} style={{ gridColumn:['title','author'].includes(k)?'span 2':'span 1' }}>
@@ -447,7 +446,7 @@ function EditBookModal({ book, onClose, onSaved }) {
     setLoading(false)
   }
   const inp = { width:'100%', padding:'9px 12px', borderRadius:'10px', fontSize:'0.85rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'#f1f0ff', outline:'none', boxSizing:'border-box' }
-  const lbl = { fontSize:'0.72rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', display:'block', letterSpacing:'0.05em', textTransform:'uppercase' }
+  const lbl = { fontSize:'0.72rem', color:'#f1f0ff', marginBottom:'4px', display:'block', letterSpacing:'0.05em', textTransform:'uppercase' }
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:'20px' }} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{ background:'linear-gradient(135deg,#1a1030,#120d25)', border:'1px solid rgba(249,168,212,0.25)', borderRadius:'24px', padding:'32px', width:'100%', maxWidth:'440px', boxShadow:'0 0 60px rgba(249,168,212,0.15)', maxHeight:'90vh', overflowY:'auto' }}>
@@ -455,7 +454,7 @@ function EditBookModal({ book, onClose, onSaved }) {
           <BookCover title={book.title} author={book.author} />
           <div>
             <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.5rem', color:'#f1f0ff', lineHeight:1.2, marginBottom:'4px' }}>{book.title}</h2>
-            <p style={{ fontSize:'0.82rem', color:'rgba(255,255,255,0.4)', fontStyle:'italic' }}>{book.author}</p>
+            <p style={{ fontSize:'0.82rem', color:'#f1f0ff', fontStyle:'italic' }}>{book.author}</p>
           </div>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
@@ -549,11 +548,11 @@ function Heatmap() {
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'20px' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
         <h3 style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em' }}>📅 Reading Activity</h3>
-        <button onClick={()=>setShowInput(s=>!s)} style={{ fontSize:'0.7rem', padding:'5px 12px', borderRadius:'8px', background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.3)', color:'#a78bfa', cursor:'pointer' }}>+ Log Today</button>
+        <button onClick={()=>setShowInput(s=>!s)} style={{ fontSize:'0.7rem', padding:'5px 12px', borderRadius:'8px', background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.3)', color:'#a78bfa', cursor:'pointer' }}>+ Today's Log</button>
       </div>
       <div style={{ display:'flex', gap:'16px', marginBottom:'14px' }}>
-        <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.3)' }}>{totalSessions} sessions</span>
-        {totalPages>0 && <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.3)' }}>{totalPages.toLocaleString()} pages logged</span>}
+        <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>{totalSessions} sessions</span>
+        {totalPages>0 && <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>{totalPages.toLocaleString()} pages logged</span>}
       </div>
       {showInput && (
         <div style={{ display:'flex', gap:'8px', marginBottom:'14px', alignItems:'center' }}>
@@ -568,13 +567,13 @@ function Heatmap() {
         {/* Month row */}
         <div style={{ display:'grid', gridTemplateColumns:'28px repeat(52,14px)', gap:'2px', marginBottom:'2px', minWidth:'fit-content' }}>
           <div />
-          {cols.map((week,i)=>{ const l=monthLabels.find(m=>m.i===i); return <div key={i} style={{ fontSize:'0.55rem', color:'rgba(255,255,255,0.35)', textAlign:'left', whiteSpace:'nowrap' }}>{l?l.label:''}</div> })}
+          {cols.map((week,i)=>{ const l=monthLabels.find(m=>m.i===i); return <div key={i} style={{ fontSize:'0.55rem', color:'rgba(245, 244, 240, 0.91)', textAlign:'left', whiteSpace:'nowrap' }}>{l?l.label:''}</div> })}
         </div>
         {/* Grid */}
         <div style={{ display:'grid', gridTemplateColumns:'28px repeat(52,14px)', gap:'2px', minWidth:'fit-content' }}>
           <div style={{ display:'grid', gridTemplateRows:'repeat(7,14px)', gap:'2px' }}>
             {DAYS.map((d,i)=>(
-              <div key={d} style={{ fontSize:'0.5rem', color:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', height:'14px' }}>{i%2===1?d:''}</div>
+              <div key={d} style={{ fontSize:'0.5rem', color:'rgba(245, 244, 240, 0.91)', display:'flex', alignItems:'center', height:'14px' }}>{i%2===1?d:''}</div>
             ))}
           </div>
           {cols.map((week,wi)=>(
@@ -592,9 +591,9 @@ function Heatmap() {
       </div>
 
       <div style={{ display:'flex', gap:'6px', alignItems:'center', marginTop:'12px', justifyContent:'flex-end' }}>
-        <span style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.25)' }}>Less</span>
+        <span style={{ fontSize:'0.62rem', color:'rgba(245, 244, 240, 0.91)' }}>Less</span>
         {[0,1,2,3,4].map(v=>(<div key={v} style={{ width:'10px', height:'10px', borderRadius:'2px', background:colorFor(v) }} />))}
-        <span style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.25)' }}>More</span>
+        <span style={{ fontSize:'0.62rem', color:'rgba(245, 244, 240, 0.91)' }}>More</span>
       </div>
     </div>
   )
@@ -615,13 +614,13 @@ function WantToRead() {
         <button onClick={add} style={{ padding:'8px 14px', borderRadius:'10px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.82rem' }}>+</button>
       </div>
       {list.length===0
-        ? <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.2)', textAlign:'center', padding:'12px 0', fontStyle:'italic' }}>Your wish list is empty…</p>
+        ? <p style={{ fontSize:'0.78rem', color:'rgba(245, 244, 240, 0.91)', textAlign:'center', padding:'12px 0', fontStyle:'italic' }}>Your wish list is empty…</p>
         : <div style={{ display:'flex', flexDirection:'column', gap:'6px', maxHeight:'200px', overflowY:'auto' }}>
             {list.map(b=>(
               <div key={b.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 10px', borderRadius:'10px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize:'0.82rem', color:'rgba(255,255,255,0.65)' }}>📖 {b.title}</span>
-                <button onClick={()=>remove(b.id)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.2)', cursor:'pointer', fontSize:'0.75rem', padding:'0 4px' }}
-                  onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.2)'}>✕</button>
+                <span style={{ fontSize:'0.82rem', color:'rgba(245, 244, 240, 0.91)' }}>📖 {b.title}</span>
+                <button onClick={()=>remove(b.id)} style={{ background:'none', border:'none', color:'rgba(245, 244, 240, 0.91)', cursor:'pointer', fontSize:'0.75rem', padding:'0 4px' }}
+                  onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245, 244, 240, 0.91)'}>✕</button>
               </div>
             ))}
           </div>
@@ -667,7 +666,7 @@ function ReadingGoals({ completedCount = 0 }) {
 
   return (
     <div style={{ background:'#0f0d15', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'24px', padding:'24px', maxWidth: '400px', color: '#fff', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
-      <h3 style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎯 Reading Goal </h3>
+      <h3 style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎯 2026 Reading Goal </h3>
 
       {/* ── Large Progress Hero ── */}
       <div style={{ background:'radial-gradient(circle at top left, rgba(124,58,237,0.15), transparent)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'20px', padding:'30px 20px', marginBottom:'20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'20px' }}>
@@ -688,7 +687,7 @@ function ReadingGoals({ completedCount = 0 }) {
           </svg>
           <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
             <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.8rem', color:'#fff', fontWeight:600 }}>{Math.round(yearPct)}%</span>
-            <span style={{ fontSize:'1.0rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.1em' }}>2026</span>
+            <span style={{ fontSize:'1.0rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em' }}></span>
           </div>
         </div>
 
@@ -705,14 +704,14 @@ function ReadingGoals({ completedCount = 0 }) {
           ) : (
             <span onClick={() => setEditingYear(true)} style={{ ...numStyle, fontSize: '2.2rem', cursor:'pointer', color: '#a78bfa' }}>{yearGoal}</span>
           )}
-          <span style={{ fontSize:'0.8rem', color:'rgba(255,255,255,0.3)', marginLeft: '4px' }}>books</span>
+          <span style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', marginLeft: '4px' }}>books</span>
         </div>
       </div>
 
       {/* ── Month Grid (Wrapping Hearts) ── */}
       <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', padding:'20px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px' }}>
-          <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.1em' }}>{currentMonth} Tracker</div>
+          <div style={{ fontSize:'0.7rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em' }}>{currentMonth} Tracker</div>
           <div style={{ display:'flex', alignItems:'baseline', gap:'4px' }}>
              <span style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem' }}>{completedCount}</span>
              <span style={{ color:'rgba(255,255,255,0.1)' }}>/</span>
@@ -798,7 +797,7 @@ function Challenges() {
               <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:ch.completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, boxShadow:ch.completed?`0 0 6px ${ch.color}`:'none', transition:'width 1s ease' }} />
             </div>
           </div>
-          <span style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.3)', fontFamily:'sans-serif', flexShrink:0 }}>{ch.done}/{ch.total}</span>
+          <span style={{ fontSize:'0.68rem', color:'rgba(245, 244, 240, 0.91', fontFamily:'sans-serif', flexShrink:0 }}>{ch.done}/{ch.total}</span>
         </div>
       ))}
     </div>
@@ -883,7 +882,7 @@ export default function App() {
           <header style={{ textAlign:'center', marginBottom:'48px', animation:'fadein 0.8s ease' }}>
             <p style={{ fontSize:'0.8rem', letterSpacing:'0.25em', textTransform:'uppercase', color:'rgba(167,139,250,0.6)', marginBottom:'12px' }}>✦ Your Literary Sanctuary ✦</p>
             <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(3rem,6vw,4.5rem)', fontWeight:'700', lineHeight:1.1, marginBottom:'16px', background:'linear-gradient(135deg,#e0d7ff 0%,#a78bfa 40%,#f9a8d4 80%,#fbbf24 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'shimmer 6s linear infinite' }}>My Reading Vault</h1>
-            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'rgba(255,255,255,0.35)' }}>Where every page tells a story…</p>
+            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'rgba(245, 244, 240, 0.91)' }}>Where every page tells a story…</p>
           </header>
 
           {/* Stat cards — 3 cards */}
@@ -899,8 +898,8 @@ export default function App() {
                   onMouseLeave={e=>{ if(!active) e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
                   <div style={{ fontSize:'1.4rem', marginBottom:'6px' }}>{s.icon}</div>
                   <div style={{ fontSize:'1.6rem', fontWeight:'700', color:active?'#a78bfa':'#e0d7ff', fontFamily:"'Cormorant Garamond',serif" }}>{s.value}</div>
-                  <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginTop:'2px' }}>{s.label}</div>
-                  {isFilterable && <div style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.18)', marginTop:'4px' }}>{active?'click to clear':'click to filter'}</div>}
+                  <div style={{ fontSize:'0.7rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.08em', marginTop:'2px' }}>{s.label}</div>
+                  {isFilterable && <div style={{ fontSize:'0.62rem', color:'rgba(245, 244, 240, 0.91)', marginTop:'4px' }}>{active?'click to clear':'click to filter'}</div>}
                 </div>
               )
             })}
@@ -936,9 +935,9 @@ export default function App() {
                 </div>
 
                 {loading
-                  ? <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)', padding:'80px', fontSize:'1.1rem' }}>✨ Opening the vault…</div>
+                  ? <div style={{ textAlign:'center', color:'rgba(245, 244, 240, 0.91)', padding:'80px', fontSize:'1.1rem' }}>✨ Opening the vault…</div>
                   : displayed.length===0
-                    ? <div style={{ textAlign:'center', color:'rgba(255,255,255,0.2)', padding:'80px' }}><div style={{ fontSize:'3rem', marginBottom:'12px' }}>📭</div><p>No books found.</p></div>
+                    ? <div style={{ textAlign:'center', color:'rgba(245, 244, 240, 0.91)', padding:'80px' }}><div style={{ fontSize:'3rem', marginBottom:'12px' }}>📭</div><p>No books found.</p></div>
                     : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'16px' }}>
                         {displayed.map((book,i)=>(
                           <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={setEditingBook} style={{ animation:`fadein 0.5s ${i*0.07}s ease both` }} />
@@ -960,14 +959,14 @@ export default function App() {
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>✦ Genres</h3>
                 {books.length===0
-                  ? <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.2)', fontStyle:'italic' }}>No books yet</p>
+                  ? <p style={{ fontSize:'0.78rem', color:'rgba(245, 244, 240, 0.91)', fontStyle:'italic' }}>No books yet</p>
                   : Object.entries(books.reduce((acc,b)=>{ acc[b.genre]=(acc[b.genre]||0)+1; return acc },{}))
                       .sort((a,b)=>b[1]-a[1])
                       .map(([genre,count])=>(
                         <div key={genre} style={{ marginBottom:'10px' }}>
                           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
-                            <span style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.55)' }}>{genre}</span>
-                            <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.3)' }}>{count}</span>
+                            <span style={{ fontSize:'0.78rem', color:'rgba(245, 244, 240, 0.91)' }}>{genre}</span>
+                            <span style={{ fontSize:'0.72rem', color:'rgba(245, 244, 240, 0.91)' }}>{count}</span>
                           </div>
                           <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'99px', overflow:'hidden' }}>
                             <div style={{ height:'100%', width:`${(count/books.length)*100}%`, background:'linear-gradient(90deg,#7c3aed,#f9a8d4)', borderRadius:'99px' }} />
@@ -981,11 +980,11 @@ export default function App() {
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
                   <h3 style={{ fontSize:'0.8rem', color:'rgba(245, 244, 240, 0.91)', textTransform:'uppercase', letterSpacing:'0.1em'}}>📚 Bookshelf</h3>
-                  <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.25)' }}>click a book to inspect</span>
+                  <span style={{ fontSize:'0.65rem', color:'rgba(245, 244, 240, 0.91)' }}>click a book to inspect</span>
                 </div>
                 {books.length > 0
                   ? <Bookshelf books={books} selectedBook={shelfSelected} onSelect={b => setShelfSelected(prev => prev?.id===b.id ? null : b)} />
-                  : <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.2)', fontStyle:'italic', textAlign:'center', padding:'20px 0' }}>Your shelf is empty…</p>
+                  : <p style={{ fontSize:'0.78rem', color:'rgba(245, 244, 240, 0.91)', fontStyle:'italic', textAlign:'center', padding:'20px 0' }}>Your shelf is empty…</p>
                 }
                 {/* Book detail panel */}
                 {shelfSelected && (
