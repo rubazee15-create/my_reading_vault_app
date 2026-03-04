@@ -30,9 +30,11 @@ const MOOD_OPTIONS = [
   { value: 'cozy',     label: '☕ Cozy'     },
   { value: 'epic',     label: '⚔️ Epic'     },
   { value: 'romantic', label: '🌹 Romantic' },
+  { value: 'whimsical', label: '🦄 Whimsical' },
+  { value: 'shattering', label: '💔 Shattering' },
+  { value: 'relatable', label: '🤗 Relatable' },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────
 function Stars({ rating }) {
   return (
     <div style={{ display:'flex', gap:'2px' }}>
@@ -82,7 +84,6 @@ function BookCover({ title, author }) {
   )
 }
 
-// ── Book Spine ────────────────────────────────────────────────
 function BookSpine({ book, index, isSelected, onClick }) {
   const [hovered, setHovered] = useState(false)
   const palette = SPINE_PALETTES[index % SPINE_PALETTES.length]
@@ -90,10 +91,7 @@ function BookSpine({ book, index, isSelected, onClick }) {
   const thickness = 28
   const statusDot = book.status === 'reading' ? '#decb60' : book.status === 'completed' ? '#95d250' : '#dc1111'
   return (
-    <div
-      onClick={() => onClick(book)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div onClick={() => onClick(book)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       title={`${book.title} — ${book.author}`}
       style={{ width:`${thickness}px`, height:`${height}px`, position:'relative', cursor:'pointer', transform:hovered||isSelected?'translateY(-14px) scale(1.05)':'translateY(0) scale(1)', transition:'transform 0.25s cubic-bezier(.34,1.56,.64,1)', transformOrigin:'bottom center', zIndex:hovered||isSelected?10:1, filter:isSelected?`drop-shadow(0 8px 24px ${palette.mid}88)`:hovered?`drop-shadow(0 6px 16px ${palette.mid}66)`:'drop-shadow(2px 3px 8px rgba(0,0,0,0.6))', flexShrink:0 }}>
       <div style={{ width:'100%', height:'100%', background:`linear-gradient(90deg, ${palette.bg} 0%, ${palette.mid} 15%, ${palette.mid} 85%, ${palette.bg} 100%)`, borderRadius:'2px 3px 3px 2px', position:'relative', overflow:'hidden', border:`1px solid ${palette.bg}` }}>
@@ -112,12 +110,10 @@ function BookSpine({ book, index, isSelected, onClick }) {
   )
 }
 
-// ── Bookshelf ─────────────────────────────────────────────────
 function Bookshelf({ books, selectedBook, onSelect }) {
   const mid = Math.ceil(books.length / 2)
   const shelf1 = books.slice(0, mid)
   const shelf2 = books.slice(mid)
-
   const ShelfRow = ({ shelfBooks, startIndex }) => (
     <div style={{ position:'relative', marginBottom:'2px' }}>
       <div style={{ position:'absolute', inset:0, background:'repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(255,255,255,0.015) 59px, rgba(255,255,255,0.015) 60px)', pointerEvents:'none' }} />
@@ -132,21 +128,19 @@ function Bookshelf({ books, selectedBook, onSelect }) {
       </div>
       <div style={{ height:'14px', background:'linear-gradient(180deg, #7c4a1e 0%, #5c3010 50%, #3d1f08 100%)', borderRadius:'1px', boxShadow:'0 5px 15px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)', margin:'0 6px', position:'relative' }}>
         <div style={{ position:'absolute', top:'3px', left:'10%', right:'10%', height:'1px', background:'rgba(255,255,255,0.06)' }} />
-        <div style={{ position:'absolute', top:'7px', left:'5%', right:'20%', height:'1px', background:'rgba(0,0,0,0.15)' }} />
       </div>
       <div style={{ height:'8px', background:'linear-gradient(180deg,rgba(0,0,0,0.35),transparent)', margin:'0 6px' }} />
     </div>
   )
-
   return (
-    <div style={{ background:'linear-gradient(180deg, #150d2a 0%, #0e0820 100%)', borderRadius:'16px', padding:'12px 6px 6px', border:'1px solid rgba(255,255,255,0.06)', boxShadow:'inset 0 0 50px rgba(0,0,0,0.4), 0 0 30px rgba(0,0,0,0.3)', position:'relative', overflow:'hidden' }}>
+    <div style={{ background:'linear-gradient(180deg, #150d2a 0%, #0e0820 100%)', borderRadius:'16px', padding:'12px 6px 6px', border:'1px solid rgba(255,255,255,0.06)', boxShadow:'inset 0 0 50px rgba(0,0,0,0.4)', position:'relative', overflow:'hidden' }}>
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'10px', background:'linear-gradient(90deg, #3d1f08, #1a0e04)', zIndex:5, borderRadius:'16px 0 0 16px' }} />
       <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'10px', background:'linear-gradient(270deg, #3d1f08, #1a0e04)', zIndex:5, borderRadius:'0 16px 16px 0' }} />
       <ShelfRow shelfBooks={shelf1} startIndex={0} />
       <ShelfRow shelfBooks={shelf2} startIndex={shelf1.length} />
       <div style={{ display:'flex', gap:'16px', justifyContent:'center', marginTop:'10px', paddingBottom:'4px' }}>
         {[['#fbbf24','Reading'],['#56b93a','Completed'],['#cc1f1f','Not Read']].map(([color, label]) => (
-          <div key={label} style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'10px', color:'rgba(255,255,255,0.88)', fontFamily:'sans-serif' }}>
+          <div key={label} style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'10px', color:'rgba(255,255,255,0.88)' }}>
             <div style={{ width:7, height:7, borderRadius:'50%', background:color, boxShadow:`0 0 4px ${color}` }} />
             {label}
           </div>
@@ -156,7 +150,6 @@ function Bookshelf({ books, selectedBook, onSelect }) {
   )
 }
 
-// ── Book Detail Panel ─────────────────────────────────────────
 function BookDetailPanel({ book, onClose, onEdit }) {
   if (!book) return null
   const cfg = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
@@ -194,14 +187,12 @@ function BookDetailPanel({ book, onClose, onEdit }) {
   )
 }
 
-// ── Book Card ─────────────────────────────────────────────────
 function BookCard({ book, onDelete, onEdit, style }) {
   const cfg = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
   const pct = book.total_pages > 0 ? Math.round((book.pages_read / book.total_pages) * 100) : 0
   const moodObj = MOOD_OPTIONS.find(m => m.value === book.mood)
   return (
-    <div
-      style={{ background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', padding:'20px', transition:'transform 0.3s,box-shadow 0.3s', position:'relative', overflow:'hidden', cursor:'pointer', ...style }}
+    <div style={{ background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', padding:'20px', transition:'transform 0.3s,box-shadow 0.3s', position:'relative', overflow:'hidden', cursor:'pointer', ...style }}
       onClick={() => onEdit(book)}
       onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow=cfg.glow; e.currentTarget.style.borderColor=cfg.color+'55' }}
       onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)' }}>
@@ -240,7 +231,6 @@ function BookCard({ book, onDelete, onEdit, style }) {
   )
 }
 
-// ── Add Book Modal ────────────────────────────────────────────
 function AddBookModal({ onClose, onAdded, nextId }) {
   const [form, setForm] = useState({ title:'', author:'', genre:'', status:'not read', mood:'', pages_read:'0', total_pages:'', rating:'', date_started:'', date_finished:'' })
   const [error, setError]   = useState('')
@@ -300,7 +290,6 @@ function AddBookModal({ onClose, onAdded, nextId }) {
   )
 }
 
-// ── Edit Book Modal ───────────────────────────────────────────
 function EditBookModal({ book, onClose, onSaved }) {
   const [form, setForm] = useState({ status:book.status||'not read', mood:book.mood||'', pages_read:String(book.pages_read??0), total_pages:String(book.total_pages??''), rating:book.rating!=null?String(book.rating):'', date_started:book.date_started&&book.date_started!=='null'?book.date_started:'', date_finished:book.date_finished&&book.date_finished!=='null'?book.date_finished:'' })
   const [error, setError]   = useState('')
@@ -369,106 +358,134 @@ function EditBookModal({ book, onClose, onSaved }) {
   )
 }
 
-// ── Reading Heatmap ───────────────────────────────────────────
+// ── Heatmap — starts Jan 1, exactly 53 cols, no scroll ────────
 function Heatmap() {
   const STORAGE_KEY = 'vault_heatmap'
-  const today = new Date()
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
   const buildGrid = () => {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    const now   = new Date()
+    const jan1  = new Date(now.getFullYear(), 0, 1)
+    // Sunday on or before Jan 1
+    const start = new Date(jan1)
+    start.setDate(jan1.getDate() - jan1.getDay())
+
     const cols = []
-    for(let i=51; i>=0; i--){
+    for (let w = 0; w < 53; w++) {
       const week = []
-      for(let d=0; d<7; d++){
-        const dt = new Date(today)
-        dt.setDate(dt.getDate()-(i*7+d))
-        const key = dt.toISOString().split('T')[0]
-        week.push({ key, date:dt, value:saved[key]||0, pages:saved[key+'_pages']||0 })
+      for (let d = 0; d < 7; d++) {
+        const dt = new Date(start)
+        dt.setDate(start.getDate() + w * 7 + d)
+        const key      = dt.toISOString().split('T')[0]
+        const future   = dt > now
+        const preYear  = dt.getFullYear() < now.getFullYear()
+        week.push({
+          key, date: new Date(dt),
+          value: (future || preYear) ? -1 : (saved[key] || 0),
+          pages: saved[key + '_pages'] || 0,
+          inactive: future || preYear,
+        })
       }
       cols.push(week)
     }
     return cols
   }
 
-  const getMonthLabels = (cols) => {
-    const labels = []; let lastMonth = -1
-    cols.forEach((week,i)=>{ const m=week[0].date.getMonth(); if(m!==lastMonth){ labels.push({i,label:MONTHS[m]}); lastMonth=m } })
+  const getMonthLabels = cols => {
+    const labels = []; let last = -1
+    cols.forEach((week, i) => {
+      const m = (week.find(c => !c.inactive) || week[0]).date.getMonth()
+      if (m !== last) { labels.push({ i, label: MONTHS[m] }); last = m }
+    })
     return labels
   }
 
-  const [cols, setCols]           = useState(buildGrid)
-  const [pages, setPages]         = useState('')
+  const [cols, setCols]         = useState(() => buildGrid())
+  const [pages, setPages]       = useState('')
   const [showInput, setShowInput] = useState(false)
 
   const logToday = () => {
-    const key = today.toISOString().split('T')[0]
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')
-    saved[key] = (saved[key]||0)+1
-    if(pages) saved[key+'_pages'] = (saved[key+'_pages']||0)+parseInt(pages)
+    const now = new Date()
+    const key = now.toISOString().split('T')[0]
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    saved[key] = (saved[key] || 0) + 1
+    if (pages) saved[key + '_pages'] = (saved[key + '_pages'] || 0) + parseInt(pages)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
     setCols(buildGrid()); setPages(''); setShowInput(false)
   }
 
-  const colorFor = (v) => {
-    if(v===0) return 'rgba(255,255,255,0.05)'
-    if(v===1) return 'rgba(167,139,250,0.35)'
-    if(v===2) return 'rgba(167,139,250,0.55)'
-    if(v===3) return 'rgba(167,139,250,0.75)'
-    return '#a78bfa'
+  const colorFor = v => {
+    if (v === -1) return 'rgba(255,255,255,0.02)'
+    if (v === 0)  return 'rgba(255,255,255,0.06)'
+    if (v === 1)  return 'rgba(124, 223, 132, 0.35)'
+    if (v === 2)  return 'rgba(81, 175, 83, 0.55)'
+    if (v === 3)  return 'rgba(27, 207, 7, 0.75)'
+    return '#2d9b38'
   }
 
-  const monthLabels = getMonthLabels(cols)
-  const flat = cols.flat()
-  const totalSessions = flat.reduce((s,c)=>s+c.value,0)
-  const totalPages    = flat.reduce((s,c)=>s+c.pages,0)
+  const monthLabels   = getMonthLabels(cols)
+  const flat          = cols.flat()
+  const totalSessions = flat.filter(c => !c.inactive && c.value > 0).reduce((s,c) => s + c.value, 0)
+  const totalPages    = flat.filter(c => !c.inactive).reduce((s,c) => s + c.pages, 0)
+  const N             = cols.length  // 53
 
   return (
-    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'20px' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
-        <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em' }}>📅 Reading Activity</h3>
-        <button onClick={()=>setShowInput(s=>!s)} style={{ fontSize:'0.7rem', padding:'5px 12px', borderRadius:'8px', background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.3)', color:'#a78bfa', cursor:'pointer' }}>+ Today's Log</button>
-      </div>
-      <div style={{ display:'flex', gap:'16px', marginBottom:'14px' }}>
-        <span style={{ fontSize:'0.72rem', color:'rgba(245,244,240,0.91)' }}>{totalSessions} sessions</span>
-        {totalPages>0 && <span style={{ fontSize:'0.72rem', color:'rgba(245,244,240,0.91)' }}>{totalPages.toLocaleString()} pages logged</span>}
+    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'12px 18px 10px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
+          <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.75)', textTransform:'uppercase', letterSpacing:'0.1em' }}>
+            📅 Reading Activity — {new Date().getFullYear()}
+          </h3>
+          <span style={{ fontSize:'0.7rem', color:'rgba(245,244,240,0.5)' }}>{totalSessions} sessions{totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''}</span>
+        </div>
+        <button onClick={() => setShowInput(s => !s)} style={{ fontSize:'0.68rem', padding:'4px 10px', borderRadius:'7px', background:'rgba(167,139,250,0.12)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', cursor:'pointer' }}>
+          + Log
+        </button>
       </div>
       {showInput && (
-        <div style={{ display:'flex', gap:'8px', marginBottom:'14px', alignItems:'center' }}>
-          <input type="number" min="0" placeholder="Pages read today (optional)" value={pages} onChange={e=>setPages(e.target.value)} onKeyDown={e=>e.key==='Enter'&&logToday()}
-            style={{ flex:1, padding:'7px 10px', borderRadius:'8px', fontSize:'0.78rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f0ff', outline:'none' }} />
-          <button onClick={logToday} style={{ padding:'7px 12px', borderRadius:'8px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.78rem' }}>Log</button>
+        <div style={{ display:'flex', gap:'8px', marginBottom:'8px', alignItems:'center' }}>
+          <input type="number" min="0" placeholder="Pages read today (optional)" value={pages}
+            onChange={e => setPages(e.target.value)} onKeyDown={e => e.key === 'Enter' && logToday()}
+            style={{ flex:1, padding:'6px 10px', borderRadius:'7px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f0ff', outline:'none' }} />
+          <button onClick={logToday} style={{ padding:'6px 12px', borderRadius:'7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.75rem' }}>Log</button>
         </div>
       )}
-      <div style={{ overflowX:'auto', width:'100%' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'28px repeat(52,14px)', gap:'2px', marginBottom:'2px', minWidth:'fit-content' }}>
+      {/* Compact fixed-height grid — cells are 9px tall */}
+      <div style={{ width:'100%' }}>
+        <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px', marginBottom:'2px' }}>
           <div />
-          {cols.map((week,i)=>{ const l=monthLabels.find(m=>m.i===i); return <div key={i} style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.91)', textAlign:'left', whiteSpace:'nowrap' }}>{l?l.label:''}</div> })}
+          {cols.map((_, i) => {
+            const l = monthLabels.find(m => m.i === i)
+            return <div key={i} style={{ fontSize:'0.65rem', color:'rgb(251, 250, 249)', overflow:'hidden', whiteSpace:'nowrap' }}>{l ? l.label : ''}</div>
+          })}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'28px repeat(52,14px)', gap:'2px', minWidth:'fit-content' }}>
-          <div style={{ display:'grid', gridTemplateRows:'repeat(7,14px)', gap:'2px' }}>
-            {DAYS.map((d,i)=>(
-              <div key={d} style={{ fontSize:'0.5rem', color:'rgba(245,244,240,0.91)', display:'flex', alignItems:'center', height:'14px' }}>{i%2===1?d:''}</div>
+        <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+            {DAYS.map((d,i) => (
+              <div key={d} style={{ height:'10px', display:'flex', alignItems:'center', fontSize:'0.55rem', color:'rgb(251, 250, 249)' }}>
+                {i % 2 === 1 ? d : ''}
+              </div>
             ))}
           </div>
-          {cols.map((week,wi)=>(
-            <div key={wi} style={{ display:'grid', gridTemplateRows:'repeat(7,14px)', gap:'2px' }}>
-              {week.map((c,di)=>(
+          {cols.map((week, wi) => (
+            <div key={wi} style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+              {week.map((c, di) => (
                 <div key={di}
-                  title={`${c.key}${c.value>0?`: ${c.value} session${c.value>1?'s':''}`:''} ${c.pages>0?`· ${c.pages} pages`:''}`}
-                  style={{ width:'14px', height:'14px', borderRadius:'3px', background:colorFor(c.value), transition:'transform 0.15s', cursor:'default' }}
-                  onMouseEnter={e=>e.currentTarget.style.transform='scale(1.5)'}
-                  onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'} />
+                  title={c.inactive ? '' : `${c.key}${c.value > 0 ? `: ${c.value} session${c.value > 1 ? 's' : ''}` : ''}${c.pages > 0 ? ` · ${c.pages} pages` : ''}`}
+                  style={{ height:'9px', borderRadius:'1.5px', background:colorFor(c.value), transition:'transform 0.1s', minWidth:0 }}
+                  onMouseEnter={e => { if (!c.inactive) e.currentTarget.style.transform = 'scale(1.6)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }} />
               ))}
             </div>
           ))}
         </div>
       </div>
-      <div style={{ display:'flex', gap:'6px', alignItems:'center', marginTop:'12px', justifyContent:'flex-end' }}>
-        <span style={{ fontSize:'0.62rem', color:'rgba(245,244,240,0.91)' }}>Less</span>
-        {[0,1,2,3,4].map(v=>(<div key={v} style={{ width:'10px', height:'10px', borderRadius:'2px', background:colorFor(v) }} />))}
-        <span style={{ fontSize:'0.62rem', color:'rgba(245,244,240,0.91)' }}>More</span>
+      <div style={{ display:'flex', gap:'5px', alignItems:'center', marginTop:'6px', justifyContent:'flex-end' }}>
+        <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>Less</span>
+        {[0,1,2,3,4].map(v => <div key={v} style={{ width:'8px', height:'8px', borderRadius:'1.5px', background:colorFor(v) }} />)}
+        <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>More</span>
       </div>
     </div>
   )
@@ -476,110 +493,174 @@ function Heatmap() {
 
 // ── TBR Jar ───────────────────────────────────────────────────
 function TBRJar() {
-  const [list, setList]   = useState(()=>JSON.parse(localStorage.getItem('vault_wtr')||'[]'))
-  const [input, setInput] = useState('')
-  const [picked, setPicked] = useState(null)
+  const [list, setList]       = useState(() => JSON.parse(localStorage.getItem('vault_wtr') || '[]'))
+  const [input, setInput]     = useState('')
+  const [picked, setPicked]   = useState(null)
   const [shaking, setShaking] = useState(false)
+  const [focused, setFocused] = useState(false)
+
+  const save = next => { setList(next); localStorage.setItem('vault_wtr', JSON.stringify(next)) }
 
   const add = () => {
-    if(!input.trim()) return
-    const next=[...list,{id:Date.now(),title:input.trim()}]
-    setList(next); localStorage.setItem('vault_wtr',JSON.stringify(next)); setInput('')
-  }
-  const remove = (id) => {
-    const next=list.filter(b=>b.id!==id)
-    setList(next); localStorage.setItem('vault_wtr',JSON.stringify(next))
-    if(picked?.id===id) setPicked(null)
-  }
-  const pickRandom = () => {
-    if(list.length===0) return
-    setShaking(true)
-    setTimeout(()=>{
-      const r = list[Math.floor(Math.random()*list.length)]
-      setPicked(r); setShaking(false)
-    }, 600)
+    if (!input.trim()) return
+    save([...list, { id: Date.now(), title: input.trim() }])
+    setInput('')
   }
 
+  const remove = id => {
+    save(list.filter(b => b.id !== id))
+    if (picked?.id === id) setPicked(null)
+  }
+
+  const pickRandom = () => {
+    if (!list.length) return
+    setShaking(true)
+    setTimeout(() => { setPicked(list[Math.floor(Math.random() * list.length)]); setShaking(false) }, 700)
+  }
+
+  // Stable decorative slips — only change when count changes
+  const slips = useMemo(() => Array.from({ length: Math.min(list.length, 12) }, (_, i) => ({
+    w: 22 + (i * 9) % 28, hue: (i * 51) % 360,
+    left: 6 + (i * 19) % 46, bot: 3 + (i * 7) % 50,
+    rot: -18 + (i * 11) % 36,
+  })), [list.length])
+
+  const ROMAN = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'];
+
   return (
-    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
+    <div style={{ background:'linear-gradient(155deg, rgba(16,6,34,0.98), rgba(8,4,20,0.99))', border:'1px solid rgba(167,139,250,0.18)', borderRadius:'24px', padding:'28px', boxShadow:'0 16px 56px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
-        <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em' }}>🫙 TBR Jar</h3>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'22px' }}>
+        <div>
+          <h3 style={{ fontSize:'0.8rem', color:'rgb(247, 246, 250)', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:'5px' }}>🫙 TBR Jar</h3>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', color:'#c4b5fd', lineHeight:1.4 }}>
+            {list.length === 0 ? 'The jar awaits its stories…' : `${list.length} tale${list.length === 1 ? '' : 's'} waiting to be told...`}
+          </p>
+        </div>
         {list.length > 0 && (
-          <button onClick={pickRandom} style={{ fontSize:'0.7rem', padding:'5px 12px', borderRadius:'8px', background:'rgba(249,168,212,0.15)', border:'1px solid rgba(249,168,212,0.3)', color:'#f9a8d4', cursor:'pointer', transition:'all 0.2s' }}>
-            🎲 Pick one
+          <button onClick={pickRandom}
+            style={{ padding:'8px 16px', borderRadius:'12px', cursor:'pointer', background:'linear-gradient(135deg,rgba(124,58,237,0.2),rgba(236,72,153,0.15))', border:'1px solid rgba(167,139,250,0.3)', color:'#c4b5fd', fontSize:'0.76rem', fontWeight:'600', letterSpacing:'0.05em', transition:'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow='0 0 22px rgba(124,58,237,0.35)'; e.currentTarget.style.borderColor='rgba(196,181,253,0.45)' }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor='rgba(167,139,250,0.3)' }}>
+            🎲 Fate decides
           </button>
         )}
       </div>
 
-      {/* Jar visual */}
-      <div style={{
-        position:'relative', margin:'0 auto 16px', width:'100px', height:'90px',
-        animation: shaking ? 'jarShake 0.6s ease' : 'none',
-      }}>
-        {/* Jar body */}
-        <div style={{ position:'absolute', bottom:0, left:'10px', right:'10px', height:'75px', background:'rgba(167,139,250,0.08)', border:'2px solid rgba(167,139,250,0.25)', borderRadius:'4px 4px 12px 12px', overflow:'hidden', backdropFilter:'blur(4px)' }}>
-          {/* Paper slips inside */}
-          {list.slice(0,8).map((b,i)=>(
-            <div key={b.id} style={{ position:'absolute', width:`${30+Math.random()*20}px`, height:'8px', background:`hsl(${(i*47)%360},60%,70%)`, borderRadius:'2px', opacity:0.7, left:`${5+((i*23)%50)}%`, bottom:`${5+(i*9)%55}%`, transform:`rotate(${-20+((i*17)%40)}deg)` }} />
-          ))}
-          {list.length === 0 && (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontSize:'0.65rem', color:'rgba(167,139,250,0.4)', fontStyle:'italic' }}>empty</div>
+      {/* Jar illustration — fixed 150×140, centred */}
+      <div style={{ display:'flex', justifyContent:'center', marginBottom:'24px' }}>
+        <div style={{ position:'relative', width:'150px', height:'140px', flexShrink:0, animation: shaking ? 'jarShake 0.7s ease' : 'none' }}>
+          {/* Glow halo */}
+          <div style={{ position:'absolute', inset:'-24px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.1),transparent 70%)', pointerEvents:'none' }} />
+          {/* Body */}
+          <div style={{ position:'absolute', bottom:0, left:'18px', right:'18px', height:'108px', background:'linear-gradient(155deg,rgba(167,139,250,0.07),rgba(124,58,237,0.03))', border:'1.5px solid rgba(167,139,250,0.22)', borderRadius:'10px 10px 20px 20px', overflow:'hidden', backdropFilter:'blur(10px)', boxShadow:'inset 0 0 40px rgba(124,58,237,0.05), 0 12px 40px rgba(0,0,0,0.45)' }}>
+            {/* Glass sheen left */}
+            <div style={{ position:'absolute', top:0, left:'9px', width:'9px', bottom:0, background:'linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02))', borderRadius:'2px', pointerEvents:'none' }} />
+            {/* Right shadow */}
+            <div style={{ position:'absolute', top:0, right:0, width:'14px', bottom:0, background:'linear-gradient(270deg,rgba(0,0,0,0.18),transparent)', pointerEvents:'none' }} />
+            {/* Paper slips */}
+            {slips.map((s,i) => (
+              <div key={i} style={{ position:'absolute', width:`${s.w}px`, height:'9px', background:`linear-gradient(90deg,hsl(${s.hue},65%,65%),hsl(${s.hue+28},55%,75%))`, borderRadius:'2px', opacity:0.72, left:`${s.left}%`, bottom:`${s.bot}%`, transform:`rotate(${s.rot}deg)`, boxShadow:'0 2px 6px rgba(0,0,0,0.35)' }} />
+            ))}
+            {list.length === 0 && (
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'6px' }}>
+                <span style={{ fontSize:'1.8rem', opacity:0.18 }}>🪄</span>
+                <span style={{ fontSize:'0.6rem', color:'rgba(167,139,250,0.3)', fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif" }}>empty</span>
+              </div>
+            )}
+          </div>
+          {/* Lid */}
+          <div style={{ position:'absolute', top:'6px', left:'12px', right:'12px', height:'32px', background:'linear-gradient(180deg,rgba(167,139,250,0.22),rgba(124,58,237,0.1))', border:'1.5px solid rgba(167,139,250,0.32)', borderRadius:'12px 12px 6px 6px', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
+            <div style={{ position:'absolute', top:'6px', left:'7px', right:'7px', height:'2px', background:'rgba(167,139,250,0.22)', borderRadius:'1px' }} />
+            <div style={{ position:'absolute', top:'11px', left:'12px', right:'12px', height:'1px', background:'rgba(167,139,250,0.1)', borderRadius:'1px' }} />
+          </div>
+          {/* Count badge */}
+          {list.length > 0 && (
+            <div style={{ position:'absolute', top:'-10px', right:'-8px', minWidth:'27px', height:'27px', borderRadius:'99px', padding:'0 7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', color:'white', fontWeight:'700', boxShadow:'0 0 16px rgba(124,58,237,0.7)' }}>{list.length}</div>
           )}
         </div>
-        {/* Jar lid */}
-        <div style={{ position:'absolute', top:0, left:'6px', right:'6px', height:'20px', background:'rgba(167,139,250,0.15)', border:'2px solid rgba(167,139,250,0.3)', borderRadius:'6px 6px 3px 3px' }}>
-          <div style={{ position:'absolute', top:'3px', left:'4px', right:'4px', height:'2px', background:'rgba(167,139,250,0.3)', borderRadius:'1px' }} />
-        </div>
-        {/* Count badge */}
-        {list.length > 0 && (
-          <div style={{ position:'absolute', top:'-6px', right:'-6px', width:'20px', height:'20px', borderRadius:'50%', background:'linear-gradient(135deg,#7c3aed,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', color:'white', fontWeight:'700', boxShadow:'0 0 8px rgba(124,58,237,0.5)' }}>{list.length}</div>
-        )}
       </div>
 
-      {/* Picked result */}
+      {/* Picked highlight */}
       {picked && (
-        <div style={{ marginBottom:'12px', padding:'10px 14px', background:'linear-gradient(135deg,rgba(249,168,212,0.1),rgba(167,139,250,0.1))', border:'1px solid rgba(249,168,212,0.3)', borderRadius:'12px', animation:'fadein 0.4s ease' }}>
-          <div style={{ fontSize:'0.65rem', color:'#f9a8d4', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'3px' }}>✨ Read this next!</div>
-          <div style={{ fontSize:'0.88rem', color:'#f1f0ff', fontFamily:"'Cormorant Garamond',serif", fontWeight:'600' }}>{picked.title}</div>
+        <div style={{ marginBottom:'20px', padding:'16px 20px', background:'linear-gradient(135deg,rgba(249,168,212,0.07),rgba(124,58,237,0.07))', border:'1px solid rgba(249,168,212,0.2)', borderRadius:'16px', animation:'fadein 0.4s ease', position:'relative', overflow:'hidden' }}>
+          <div style={{ position:'absolute', top:'-30px', right:'-30px', width:'90px', height:'90px', borderRadius:'50%', background:'rgba(249,168,212,0.07)', filter:'blur(20px)', pointerEvents:'none' }} />
+          <div style={{ fontSize:'0.58rem', color:'#f9a8d4', textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:'6px', opacity:0.8 }}>✨ Read this next</div>
+          <div style={{ fontSize:'1.15rem', fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic', fontWeight:'600', lineHeight:1.3, background:'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'tbrShimmer 2.5s linear infinite' }}>{picked.title}</div>
         </div>
       )}
 
-      {/* Input */}
-      <div style={{ display:'flex', gap:'8px', marginBottom:'12px' }}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Add a book title…"
-          style={{ flex:1, padding:'8px 12px', borderRadius:'10px', fontSize:'0.82rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f0ff', outline:'none' }} />
-        <button onClick={add} style={{ padding:'8px 14px', borderRadius:'10px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.82rem' }}>+</button>
+      {/* Thin divider */}
+      <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,rgba(167,139,250,0.18),transparent)', marginBottom:'20px' }} />
+
+      {/* Input row */}
+      <div style={{ display:'flex', gap:'10px', marginBottom:'20px' }}>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          placeholder="Add a title to the jar…"
+          style={{ flex:1, padding:'11px 16px', borderRadius:'14px', fontSize:'0.9rem', background:'rgba(255,255,255,0.04)', border:`1px solid ${focused ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.07)'}`, color:'#f1f0ff', outline:'none', boxShadow:focused?'0 0 0 3px rgba(124,58,237,0.1)':'none', transition:'all 0.2s', boxSizing:'border-box' }} />
+        <button onClick={add}
+          style={{ padding:'11px 20px', borderRadius:'14px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'1.05rem', fontWeight:'700', boxShadow:'0 0 18px rgba(124,58,237,0.4)', transition:'all 0.2s' }}
+          onMouseEnter={e => { e.currentTarget.style.transform='scale(1.07)'; e.currentTarget.style.boxShadow='0 0 28px rgba(124,58,237,0.65)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 0 18px rgba(124,58,237,0.4)' }}>+</button>
       </div>
 
-      {/* List */}
-      {list.length === 0
-        ? <p style={{ fontSize:'0.78rem', color:'rgba(245,244,240,0.5)', textAlign:'center', padding:'8px 0', fontStyle:'italic' }}>Drop some books in the jar…</p>
-        : <div style={{ display:'flex', flexDirection:'column', gap:'6px', maxHeight:'180px', overflowY:'auto' }}>
-            {list.map(b=>(
-              <div key={b.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 10px', borderRadius:'10px', background: picked?.id===b.id ? 'rgba(249,168,212,0.08)' : 'rgba(255,255,255,0.03)', border:`1px solid ${picked?.id===b.id ? 'rgba(249,168,212,0.3)' : 'rgba(255,255,255,0.06)'}`, transition:'all 0.2s' }}>
-                <span style={{ fontSize:'0.82rem', color:'rgba(245,244,240,0.91)' }}>📖 {b.title}</span>
-                <button onClick={()=>remove(b.id)} style={{ background:'none', border:'none', color:'rgba(245,244,240,0.4)', cursor:'pointer', fontSize:'0.75rem', padding:'0 4px', transition:'color 0.2s' }}
-                  onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,244,240,0.4)'}>✕</button>
+      {/* Book list — aesthetic serif titles with numerals */}
+      {list.length === 0 ? (
+        <p style={{ fontSize:'0.95rem', color:'rgba(244, 244, 243, 0.94)', textAlign:'center', padding:'14px 0' }}>Drop some books in the jar…</p>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:'4px', maxHeight:'280px', overflowY:'auto', paddingRight:'2px' }}>
+          {list.map((b, idx) => {
+            const isPicked = picked?.id === b.id
+            return (
+              <div key={b.id}
+                style={{ display:'flex', alignItems:'center', gap:'12px', padding:'11px 14px', borderRadius:'13px', background:isPicked?'rgba(249,168,212,0.06)':'rgba(255,255,255,0.025)', border:`1px solid ${isPicked?'rgba(249,168,212,0.2)':'rgba(255,255,255,0.05)'}`, transition:'all 0.22s', cursor:'default' }}
+                onMouseEnter={e => { if (!isPicked) { e.currentTarget.style.background='rgba(167,139,250,0.055)'; e.currentTarget.style.borderColor='rgba(167,139,250,0.14)' }}}
+                onMouseLeave={e => { if (!isPicked) { e.currentTarget.style.background='rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.05)' }}}>
+                {/* Numeral */}
+                <span style={{ fontSize:'0.65rem', color:isPicked?'rgba(249,168,212,0.6)':'rgba(167,139,250,0.4)', letterSpacing:'0.06em', flexShrink:0, minWidth:'18px', textAlign:'right', lineHeight:1 }}>{ROMAN[idx] || idx+1}.</span>
+                {/* Title — shimmer gradient on picked, soft gradient otherwise */}
+                <span style={{
+                  fontSize:'0.9rem', fontWeight: isPicked ? '600' : '400',
+                  flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                  letterSpacing:'0.015em', lineHeight:1.35,
+                  background: isPicked
+                    ? 'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)'
+                    : 'linear-gradient(90deg,rgba(245,244,240,0.85) 0%,rgba(196,181,253,0.8) 60%,rgba(245,244,240,0.85) 100%)',
+                  backgroundSize: '200% auto',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+                  animation: isPicked ? 'tbrShimmer 2.2s linear infinite' : 'none',
+                }}>{b.title}</span>
+                {/* Remove */}
+                <button onClick={() => remove(b.id)}
+                  style={{ background:'none', border:'none', color:'rgba(245,244,240,0.18)', cursor:'pointer', fontSize:'0.7rem', padding:'0 2px', transition:'color 0.2s', flexShrink:0, lineHeight:1 }}
+                  onMouseEnter={e => e.currentTarget.style.color='#f87171'}
+                  onMouseLeave={e => e.currentTarget.style.color='rgba(245,244,240,0.18)'}>✕</button>
               </div>
-            ))}
-          </div>
-      }
+            )
+          })}
+        </div>
+      )}
 
       <style>{`
         @keyframes jarShake {
-          0%,100%{ transform:rotate(0deg) }
-          20%{ transform:rotate(-8deg) }
-          40%{ transform:rotate(8deg) }
-          60%{ transform:rotate(-6deg) }
-          80%{ transform:rotate(6deg) }
+          0%,100%{ transform:rotate(0deg) translateY(0) }
+          15%{ transform:rotate(-9deg) translateY(-4px) }
+          30%{ transform:rotate(9deg) translateY(-6px) }
+          50%{ transform:rotate(-6deg) translateY(-3px) }
+          70%{ transform:rotate(6deg) translateY(-4px) }
+          88%{ transform:rotate(-3deg) translateY(-1px) }
+        }
+        @keyframes tbrShimmer {
+          0%  { background-position:200% center }
+          100%{ background-position:-200% center }
         }
       `}</style>
     </div>
   )
 }
 
-// ── Mood Filter Panel ─────────────────────────────────────────
 function MoodFilter({ selectedMood, onChange }) {
   const moods = [{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS]
   return (
@@ -597,28 +678,32 @@ function MoodFilter({ selectedMood, onChange }) {
   )
 }
 
-// ── Reading Goals ─────────────────────────────────────────────
 function ReadingGoals({ completedCount = 0 }) {
-  const [yearGoal, setYearGoal]   = useState(24)
-  const [monthGoal, setMonthGoal] = useState(50)
+  const [yearGoal, setYearGoal]   = useState(() => parseInt(localStorage.getItem('vault_yearGoal') || '24'))
+  const [monthGoal, setMonthGoal] = useState(() => parseInt(localStorage.getItem('vault_monthGoal') || '50'))
   const [editingYear, setEditingYear]   = useState(false)
   const [editingMonth, setEditingMonth] = useState(false)
-
-  const r = 52
-  const circ = 2 * Math.PI * r
+  const r = 52, circ = 2 * Math.PI * r
   const yearPct = Math.min((completedCount / (yearGoal || 1)) * 100, 100)
-  const stroke = (yearPct / 100) * circ
-
-  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+  const stroke  = (yearPct / 100) * circ
+  const months  = ["January","February","March","April","May","June","July","August","September","October","November","December"]
   const currentMonth = months[new Date().getMonth()]
-
   const numStyle = { fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:'1.4rem', color:'#a78bfa', fontWeight:600, lineHeight:1 }
-
-  const handleInputChange = (setter, val) => { if(val==="") setter(""); else setter(parseInt(val,10)) }
-  const handleBlur = (setter, currentVal, flagSetter) => { if(!currentVal||currentVal<1) setter(1); flagSetter(false) }
-
+  const handleInputChange = (setter, key, val) => {
+    if (val === "") { setter("") } else {
+      const n = parseInt(val, 10)
+      setter(n)
+      localStorage.setItem(key, String(n))
+    }
+  }
+  const handleBlur = (setter, key, currentVal, flagSetter) => {
+    const val = (!currentVal || currentVal < 1) ? 1 : currentVal
+    setter(val)
+    localStorage.setItem(key, String(val))
+    flagSetter(false)
+  }
   return (
-    <div style={{ background:'#0f0d15', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'24px', padding:'24px', color:'#fff', boxShadow:'0 20px 40px rgba(0,0,0,0.4)' }}>
+    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'24px', padding:'24px', color:'#fff', boxShadow:'0 20px 40px rgba(0,0,0,0.4)' }}>
       <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎯 2026 Reading Goal</h3>
       <div style={{ background:'radial-gradient(circle at top left, rgba(124,58,237,0.15), transparent)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'20px', padding:'30px 20px', marginBottom:'20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'20px' }}>
         <div style={{ position:'relative' }}>
@@ -630,10 +715,7 @@ function ReadingGoals({ completedCount = 0 }) {
               <filter id="ringGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
             <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12"/>
-            <circle cx="70" cy="70" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="12"
-              strokeDasharray={`${stroke} ${circ}`} strokeLinecap="round"
-              transform="rotate(-90 70 70)" filter="url(#ringGlow)"
-              style={{ transition:'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}/>
+            <circle cx="70" cy="70" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="12" strokeDasharray={`${stroke} ${circ}`} strokeLinecap="round" transform="rotate(-90 70 70)" filter="url(#ringGlow)" style={{ transition:'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}/>
           </svg>
           <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
             <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.8rem', color:'#fff', fontWeight:600 }}>{Math.round(yearPct)}%</span>
@@ -643,7 +725,7 @@ function ReadingGoals({ completedCount = 0 }) {
           <span style={{ ...numStyle, fontSize:'2.2rem', color:'#fff' }}>{completedCount}</span>
           <span style={{ fontSize:'1.5rem', color:'rgba(255,255,255,0.1)' }}>/</span>
           {editingYear ? (
-            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal,e.target.value)} onBlur={()=>handleBlur(setYearGoal,yearGoal,setEditingYear)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setYearGoal,yearGoal,setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
+            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal,'vault_yearGoal',e.target.value)} onBlur={()=>handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
           ) : (
             <span onClick={()=>setEditingYear(true)} style={{ ...numStyle, fontSize:'2.2rem', cursor:'pointer', color:'#a78bfa' }}>{yearGoal}</span>
           )}
@@ -657,37 +739,31 @@ function ReadingGoals({ completedCount = 0 }) {
             <span style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem' }}>{completedCount}</span>
             <span style={{ color:'rgba(255,255,255,0.1)' }}>/</span>
             {editingMonth ? (
-              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal,e.target.value)} onBlur={()=>handleBlur(setMonthGoal,monthGoal,setEditingMonth)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setMonthGoal,monthGoal,setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
+              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal,'vault_monthGoal',e.target.value)} onBlur={()=>handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
             ) : (
               <span onClick={()=>setEditingMonth(true)} style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem', cursor:'pointer' }}>{monthGoal}</span>
             )}
           </div>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(32px, 1fr))', gap:'8px', maxHeight:'200px', overflowY:'auto', paddingRight:'4px' }} className="custom-scrollbar">
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(32px, 1fr))', gap:'8px', maxHeight:'200px', overflowY:'auto', paddingRight:'4px' }}>
           {Array.from({ length:Math.max(monthGoal||0,0) },(_,i)=>{
             const done = i < completedCount
             return (
               <div key={i} style={{ height:'32px', width:'32px', borderRadius:'8px', background:done?'rgba(239,68,68,0.1)':'rgba(255,255,255,0.03)', border:done?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.3s ease' }}>
                 {done ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" style={{ filter:'drop-shadow(0 0 4px #ef4444)' }}>
-                    <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="#ef4444"/>
-                  </svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" style={{ filter:'drop-shadow(0 0 4px #ef4444)' }}><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="#ef4444"/></svg>
                 ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ opacity:0.2 }}>
-                    <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="white"/>
-                  </svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ opacity:0.2 }}><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="white"/></svg>
                 )}
               </div>
             )
           })}
         </div>
       </div>
-      <style>{`.custom-scrollbar::-webkit-scrollbar{width:4px;}.custom-scrollbar::-webkit-scrollbar-track{background:transparent;}.custom-scrollbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px;}`}</style>
     </div>
   )
 }
 
-// ── Challenges ────────────────────────────────────────────────
 function Challenges() {
   const items = [
     { id:1, title:'Read 5 different genres', icon:'🎭', total:5, done:4, color:'#f59e0b' },
@@ -710,65 +786,54 @@ function Challenges() {
               <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:ch.completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, boxShadow:ch.completed?`0 0 6px ${ch.color}`:'none', transition:'width 1s ease' }} />
             </div>
           </div>
-          <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', fontFamily:'sans-serif', flexShrink:0 }}>{ch.done}/{ch.total}</span>
+          <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{ch.done}/{ch.total}</span>
         </div>
       ))}
     </div>
   )
 }
 
-// ── Main App ──────────────────────────────────────────────────
 export default function App() {
-  const [books, setBooks]           = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [sortBy, setSortBy]         = useState('')
-  const [sortOrder, setSortOrder]   = useState('desc')
-  const [filter, setFilter]         = useState('all')
-  const [selectedMood, setSelectedMood] = useState('all')
+  const [books, setBooks]             = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [sortBy, setSortBy]           = useState(() => localStorage.getItem('vault_sortBy') || '')
+  const [sortOrder, setSortOrder]     = useState(() => localStorage.getItem('vault_sortOrder') || 'desc')
+  const [filter, setFilter]           = useState(() => localStorage.getItem('vault_filter') || 'all')
+  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem('vault_mood') || 'all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingBook, setEditingBook]   = useState(null)
   const [shelfSelected, setShelfSelected] = useState(null)
-
+  const [libOpen, setLibOpen]         = useState(false)
   const [particles] = useState(()=>Array.from({length:30},(_,i)=>({ id:i, x:Math.random()*100, y:Math.random()*100, size:Math.random()*2+1, duration:Math.random()*6+4, delay:Math.random()*5 })))
 
+  const setSortByP    = v => { setSortBy(v);       localStorage.setItem('vault_sortBy', v) }
+  const setSortOrderP = v => { setSortOrder(v);    localStorage.setItem('vault_sortOrder', v) }
+  const setFilterP    = v => { setFilter(v);       localStorage.setItem('vault_filter', v) }
+  const setMoodP      = v => { setSelectedMood(v); localStorage.setItem('vault_mood', v) }
+
   const fetchBooks = async () => {
-    try {
-      const res = await axios.get(`${API}/view_books`)
-      setBooks(res.data)
-    } catch(e){ console.error('Is FastAPI running?', e) }
+    try { const res = await axios.get(`${API}/view_books`); setBooks(res.data) }
+    catch(e){ console.error('Is FastAPI running?', e) }
     setLoading(false)
   }
-
   useEffect(()=>{ fetchBooks() },[])
 
-  const deleteBook = async (id) => {
+  const deleteBook = async id => {
     if(!confirm('Remove this book from your vault?')) return
     await axios.delete(`${API}/delete/${id}`)
     if(shelfSelected?.id===id) setShelfSelected(null)
     fetchBooks()
   }
 
-  const displayed = useMemo(() => {
-    return books
-      .filter(b => {
-        const statusMatch = filter === 'all' || b.status === filter
-        const moodMatch   = selectedMood === 'all' || b.mood === selectedMood
-        return statusMatch && moodMatch
-      })
-      .sort((a, b) => {
-        if (!sortBy) return 0
-        const aVal = a[sortBy], bVal = b[sortBy]
-        if (sortOrder === 'asc') return aVal > bVal ? 1 : -1
-        return aVal < bVal ? 1 : -1
-      })
-  }, [books, filter, selectedMood, sortBy, sortOrder])
+  const displayed = useMemo(() => books
+    .filter(b => (filter==='all'||b.status===filter) && (selectedMood==='all'||b.mood===selectedMood))
+    .sort((a,b) => {
+      if(!sortBy) return 0
+      if(sortOrder==='asc') return a[sortBy]>b[sortBy]?1:-1
+      return a[sortBy]<b[sortBy]?1:-1
+    }), [books,filter,selectedMood,sortBy,sortOrder])
 
-  const stats = {
-    total:     books.length,
-    completed: books.filter(b=>b.status==='completed').length,
-    reading:   books.filter(b=>b.status==='reading').length,
-  }
-
+  const stats = { total:books.length, completed:books.filter(b=>b.status==='completed').length, reading:books.filter(b=>b.status==='reading').length }
   const STAT_CARDS = [
     { label:'Total Books', value:stats.total,     icon:'📚', key:'all'       },
     { label:'Completed',   value:stats.completed, icon:'✅', key:'completed' },
@@ -778,7 +843,7 @@ export default function App() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
         body{background:#0d0a1a;overflow-x:hidden;}
         ::-webkit-scrollbar{width:4px;height:4px;}
@@ -786,35 +851,32 @@ export default function App() {
         @keyframes float{0%,100%{transform:translateY(0);opacity:0.4;}50%{transform:translateY(-20px);opacity:0.9;}}
         @keyframes shimmer{0%{background-position:-200% center;}100%{background-position:200% center;}}
         @keyframes fadein{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
         select option{background:#1a1030;color:#f1f0ff;}
         .animate-fade-in{animation:fadein 0.5s ease-out forwards;opacity:0;}
+        .slide-down{animation:slideDown 0.25s ease forwards;}
       `}</style>
-
       <div style={{ minHeight:'100vh', background:'#0d0a1a', fontFamily:"'DM Sans',sans-serif", position:'relative' }}>
-
-        {/* Background */}
         <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0 }}>
           <div style={{ position:'absolute', top:'-10%', left:'-5%', width:'500px', height:'500px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.15),transparent 70%)', filter:'blur(40px)' }} />
           {particles.map(p=>(
             <div key={p.id} style={{ position:'absolute', left:`${p.x}%`, top:`${p.y}%`, width:`${p.size}px`, height:`${p.size}px`, borderRadius:'50%', background:'rgba(167,139,250,0.6)', animation:`float ${p.duration}s ${p.delay}s ease-in-out infinite` }} />
           ))}
         </div>
-
         <div style={{ position:'relative', zIndex:1, maxWidth:'1500px', margin:'0 auto', padding:'48px 24px' }}>
 
-          {/* Header */}
-          <header style={{ textAlign:'center', marginBottom:'48px', animation:'fadein 0.8s ease' }}>
+          <header style={{ textAlign:'center', marginBottom:'40px', animation:'fadein 0.8s ease' }}>
             <p style={{ fontSize:'0.8rem', letterSpacing:'0.25em', textTransform:'uppercase', color:'rgba(167,139,250,0.6)', marginBottom:'12px' }}>✦ Your Literary Sanctuary ✦</p>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(3rem,6vw,4.5rem)', fontWeight:'700', lineHeight:1.1, marginBottom:'16px', background:'linear-gradient(135deg,#e0d7ff 0%,#a78bfa 40%,#f9a8d4 80%,#fbbf24 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'shimmer 6s linear infinite' }}>My Reading Vault</h1>
-            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'rgba(255,255,255,0.35)' }}>Where every page tells a story…</p>
+            <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(3rem,6vw,4.5rem)', fontWeight:'700', lineHeight:1.2, marginBottom:'16px', background:'linear-gradient(135deg,#e0d7ff 0%,#a78bfa 40%,#f9a8d4 80%,#fbbf24 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'shimmer 6s linear infinite' }}>My Reading Vault</h1>
+            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'#f1f0ff' }}>Where every page tells a story…</p>
           </header>
 
           {/* Stats */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', marginBottom:'40px', maxWidth:'700px', margin:'0 auto 40px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', maxWidth:'700px', margin:'0 auto 28px' }}>
             {STAT_CARDS.map(s=>{
               const active = filter===s.key
               return (
-                <div key={s.label} onClick={()=>setFilter(active?'all':s.key)}
+                <div key={s.label} onClick={()=>setFilterP(active?'all':s.key)}
                   style={{ background:active?'rgba(167,139,250,0.12)':'rgba(255,255,255,0.03)', border:active?'1px solid rgba(167,139,250,0.4)':'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px 16px', textAlign:'center', cursor:'pointer', transition:'all 0.2s' }}>
                   <div style={{ fontSize:'1.4rem', marginBottom:'6px' }}>{s.icon}</div>
                   <div style={{ fontSize:'1.6rem', fontWeight:'700', color:active?'#a78bfa':'#e0d7ff', fontFamily:"'Cormorant Garamond',serif" }}>{s.value}</div>
@@ -824,74 +886,85 @@ export default function App() {
             })}
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:'28px', alignItems:'start' }}>
+          {/* Heatmap */}
+          <div style={{ marginBottom:'36px' }}><Heatmap /></div>
+
+          {/* Two-column layout */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'28px', alignItems:'start' }}>
 
             {/* ── LEFT COLUMN ── */}
-            <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-              {/* Controls */}
-              <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center' }}>
-                <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ padding:'9px 14px', borderRadius:'12px', fontSize:'0.82rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#e0d7ff', outline:'none' }}>
-                  <option value="">Sort by…</option>
-                  <option value="rating">Rating</option>
-                  <option value="author">Author</option>
-                  <option value="genre">Genre</option>
-                </select>
-                <select value={sortOrder} onChange={e=>setSortOrder(e.target.value)} style={{ padding:'9px 14px', borderRadius:'12px', fontSize:'0.82rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#e0d7ff', outline:'none' }}>
-                  <option value="desc">↓ Desc</option>
-                  <option value="asc">↑ Asc</option>
-                </select>
-                <div style={{ flex:1 }} />
-                <button onClick={()=>setShowAddModal(true)} style={{ padding:'9px 22px', borderRadius:'12px', cursor:'pointer', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', fontWeight:'600' }}>+ Add Book</button>
+              {/* ── MY LIBRARY — always open, show first 3, expand for more ── */}
+              <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', overflow:'hidden' }}>
+                {/* Header */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 14px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                    <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.2rem', fontWeight:'700', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(167,139,250,0.8)' }}>✦ My Library ✦ </h2>
+                    <span style={{ fontSize:'0.68rem', background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', borderRadius:'99px', padding:'2px 10px' }}>{displayed.length} books</span>
+                  </div>
+                  {/* Sort + Add inside library header */}
+                  <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                    <select value={sortBy} onChange={e=>setSortByP(e.target.value)} style={{ padding:'6px 10px', borderRadius:'9px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', color:'#e0d7ff', outline:'none' }}>
+                      <option value="">Sort…</option>
+                      <option value="rating">Rating</option>
+                      <option value="author">Author</option>
+                      <option value="genre">Genre</option>
+                    </select>
+                    <select value={sortOrder} onChange={e=>setSortOrderP(e.target.value)} style={{ padding:'6px 10px', borderRadius:'9px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', color:'#e0d7ff', outline:'none' }}>
+                      <option value="desc">↓</option>
+                      <option value="asc">↑</option>
+                    </select>
+                    <button onClick={()=>setShowAddModal(true)} style={{ padding:'6px 16px', borderRadius:'9px', cursor:'pointer', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', fontWeight:'600', fontSize:'0.78rem', whiteSpace:'nowrap' }}>+ Add</button>
+                  </div>
+                </div>
+                {/* Books — always show first 3, rest hidden behind toggle */}
+                <div style={{ padding:'0 16px 16px' }}>
+                  {loading ? (
+                    <div style={{ textAlign:'center', color:'#e0d7ff', padding:'32px' }}>✨ Opening the vault…</div>
+                  ) : displayed.length === 0 ? (
+                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'28px', fontStyle:'italic' }}>No books match your filters.</div>
+                  ) : (
+                    <>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' }}>
+                        {(libOpen ? displayed : displayed.slice(0,3)).map((book,i) => (
+                          <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={setEditingBook} style={{ animationDelay:`${i*0.05}s` }} />
+                        ))}
+                      </div>
+                      {/* Show more / less toggle — only appears when there are more than 3 books */}
+                      {displayed.length > 3 && (
+                        <button onClick={()=>setLibOpen(o=>!o)}
+                          style={{ marginTop:'14px', width:'100%', padding:'10px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgb(125, 98, 180)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
+                          onMouseEnter={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.13)'; e.currentTarget.style.color='#a78bfa' }}
+                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(249, 247, 254, 0.7)' }}>
+                          {libOpen ? `↑ Show less` : `↓ Show all ${displayed.length} books`}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Book Grid */}
-              {loading ? (
-                <div style={{ textAlign:'center', color:'#e0d7ff', padding:'80px' }}>✨ Opening the vault…</div>
-              ) : (
-                <>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'16px' }}>
-                    {displayed.map((book,i) => (
-                      <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={setEditingBook} className="animate-fade-in" style={{ animationDelay:`${i*0.07}s` }} />
-                    ))}
-                  </div>
-                  {displayed.length === 0 && (
-                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'40px', fontStyle:'italic' }}>No books match your filters.</div>
-                  )}
-                </>
-              )}
+              {/* ── FILTER BY MOOD — always visible, original style ── */}
+              <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
+                <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎭 Filter by Mood</h3>
+                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                  {[{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS].map(m=>(
+                    <button key={m.value} onClick={()=>setMoodP(m.value)}
+                      style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {/* Heatmap — below the book grid */}
-              <Heatmap />
-
-              {/* TBR Jar — below heatmap */}
+              {/* TBR Jar */}
               <TBRJar />
-
-              {/* Mood Filter — below TBR Jar */}
-              <MoodFilter selectedMood={selectedMood} onChange={setSelectedMood} />
 
             </div>
 
             {/* ── RIGHT COLUMN ── */}
-            <div style={{ display:'flex', flexDirection:'column', gap:'16px', position:'sticky', top:'24px' }}>
-
-              {/* Genre Distribution */}
-              <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
-                <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>✦ Genres</h3>
-                {Object.entries(books.reduce((acc,b)=>{ acc[b.genre]=(acc[b.genre]||0)+1; return acc },{}))
-                  .sort((a,b)=>b[1]-a[1])
-                  .map(([genre,count])=>(
-                    <div key={genre} style={{ marginBottom:'10px' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.78rem', color:'#f5f4f0' }}>
-                        <span>{genre}</span><span>{count}</span>
-                      </div>
-                      <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'99px', marginTop:'4px' }}>
-                        <div style={{ height:'100%', width:`${(count/books.length)*100}%`, background:'linear-gradient(90deg,#7c3aed,#f9a8d4)', borderRadius:'99px' }} />
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
+            <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
               {/* Bookshelf */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>📚 Bookshelf</h3>
@@ -902,16 +975,26 @@ export default function App() {
                   </div>
                 )}
               </div>
-
+              {/* Genres */}
+              <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
+                <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>✦ Genres</h3>
+                {Object.entries(books.reduce((acc,b)=>{ acc[b.genre]=(acc[b.genre]||0)+1; return acc },{})).sort((a,b)=>b[1]-a[1]).map(([genre,count])=>(
+                  <div key={genre} style={{ marginBottom:'10px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.78rem', color:'#f5f4f0' }}><span>{genre}</span><span>{count}</span></div>
+                    <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'99px', marginTop:'4px' }}>
+                      <div style={{ height:'100%', width:`${(count/books.length)*100}%`, background:'linear-gradient(90deg,#7c3aed,#f9a8d4)', borderRadius:'99px' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
               <ReadingGoals completedCount={stats.completed} />
               <Challenges />
-
             </div>
+
           </div>
         </div>
       </div>
-
-      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} nextId={books.length ? Math.max(...books.map(b=>b.id))+1 : 1} />}
+      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} nextId={books.length?Math.max(...books.map(b=>b.id))+1:1} />}
       {editingBook  && <EditBookModal book={editingBook} onClose={()=>setEditingBook(null)} onSaved={fetchBooks} />}
     </>
   )
