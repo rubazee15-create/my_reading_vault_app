@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import axios from 'axios'
 
 const API = 'http://127.0.0.1:8000'
@@ -34,6 +34,57 @@ const MOOD_OPTIONS = [
   { value: 'shattering', label: '💔 Shattering' },
   { value: 'relatable', label: '🤗 Relatable' },
 ]
+
+const STORAGE_KEY = 'vault_heatmap'
+
+// ── Heatmap helpers (module-level so they're stable) ──────────
+// Helper: get local YYYY-MM-DD key for any Date object (avoids UTC off-by-one)
+function localDateKey(dt) {
+  const yyyy = dt.getFullYear()
+  const mm   = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd   = String(dt.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function buildGrid() {
+  let saved = {}
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch {}
+  const now  = new Date()
+  const jan1 = new Date(now.getFullYear(), 0, 1)
+  const start = new Date(jan1)
+  start.setDate(jan1.getDate() - jan1.getDay())
+
+  const cols = []
+  for (let w = 0; w < 53; w++) {
+    const week = []
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(start)
+      dt.setDate(start.getDate() + w * 7 + d)
+      // Use local date key — same format logToday saves with
+      const key     = localDateKey(dt)
+      const future  = dt > now
+      const preYear = dt.getFullYear() < now.getFullYear()
+      week.push({
+        key, date: new Date(dt),
+        value:    (future || preYear) ? -1 : (saved[key] || 0),
+        pages:    (!future && !preYear) ? (saved[key + '_pages'] || 0) : 0,
+        inactive: future || preYear,
+      })
+    }
+    cols.push(week)
+  }
+  return cols
+}
+
+// FIX 1: consistent colour function — inactive cells always use the SAME rgba value
+function colorFor(v) {
+  if (v === -1) return 'rgba(255,255,255,0.045)'   // inactive (future / pre-year)
+  if (v === 0)  return 'rgba(255,255,255,0.045)'   // SAME shade as inactive → uniform grey
+  if (v === 1)  return 'rgba(124,223,132,0.35)'
+  if (v === 2)  return 'rgba(81,175,83,0.55)'
+  if (v === 3)  return 'rgba(27,207,7,0.75)'
+  return '#2d9b38'
+}
 
 function Stars({ rating }) {
   return (
@@ -86,8 +137,8 @@ function BookCover({ title, author }) {
 
 function BookSpine({ book, index, isSelected, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const palette = SPINE_PALETTES[index % SPINE_PALETTES.length]
-  const height = 110 + Math.min((book.total_pages || 300) / 600, 1) * 30
+  const palette  = SPINE_PALETTES[index % SPINE_PALETTES.length]
+  const height   = 110 + Math.min((book.total_pages || 300) / 600, 1) * 30
   const thickness = 28
   const statusDot = book.status === 'reading' ? '#decb60' : book.status === 'completed' ? '#95d250' : '#dc1111'
   return (
@@ -111,7 +162,7 @@ function BookSpine({ book, index, isSelected, onClick }) {
 }
 
 function Bookshelf({ books, selectedBook, onSelect }) {
-  const mid = Math.ceil(books.length / 2)
+  const mid    = Math.ceil(books.length / 2)
   const shelf1 = books.slice(0, mid)
   const shelf2 = books.slice(mid)
   const ShelfRow = ({ shelfBooks, startIndex }) => (
@@ -188,8 +239,8 @@ function BookDetailPanel({ book, onClose, onEdit }) {
 }
 
 function BookCard({ book, onDelete, onEdit, style }) {
-  const cfg = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
-  const pct = book.total_pages > 0 ? Math.round((book.pages_read / book.total_pages) * 100) : 0
+  const cfg    = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
+  const pct    = book.total_pages > 0 ? Math.round((book.pages_read / book.total_pages) * 100) : 0
   const moodObj = MOOD_OPTIONS.find(m => m.value === book.mood)
   return (
     <div style={{ background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', padding:'20px', transition:'transform 0.3s,box-shadow 0.3s', position:'relative', overflow:'hidden', cursor:'pointer', ...style }}
@@ -231,9 +282,9 @@ function BookCard({ book, onDelete, onEdit, style }) {
   )
 }
 
-function AddBookModal({ onClose, onAdded, nextId }) {
+function AddBookModal({ onClose, onAdded, nextId, existingBooks }) {
   const [form, setForm] = useState({ title:'', author:'', genre:'', status:'not read', mood:'', pages_read:'0', total_pages:'', rating:'', date_started:'', date_finished:'' })
-  const [error, setError]   = useState('')
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
   const submit = async () => {
@@ -241,6 +292,18 @@ function AddBookModal({ onClose, onAdded, nextId }) {
     if (!form.title||!form.author||!form.genre||!form.total_pages){ setError('Please fill in Title, Author, Genre and Total Pages.'); return }
     setLoading(true)
     try {
+      // Always fetch fresh list from server to prevent stale-prop duplicates
+      let freshBooks = existingBooks
+      try { const res = await axios.get(`${API}/view_books`); freshBooks = res.data } catch {}
+      const norm = s => (s||'').trim().toLowerCase()
+      const duplicate = freshBooks.find(b =>
+        norm(b.title) === norm(form.title) && norm(b.author) === norm(form.author)
+      )
+      if (duplicate) {
+        setError(`"${duplicate.title}" by ${duplicate.author} is already in your vault!`)
+        setLoading(false)
+        return
+      }
       await axios.post(`${API}/create`, { id:nextId, title:form.title.trim(), author:form.author.trim(), genre:form.genre.trim(), status:form.status, mood:form.mood||null, pages_read:parseInt(form.pages_read)||0, total_pages:parseInt(form.total_pages), rating:form.rating?parseInt(form.rating):null, date_started:form.date_started||null, date_finished:form.date_finished||null })
       onAdded(); onClose()
     } catch(e){ setError(e.response?.data?.detail||'Something went wrong.') }
@@ -292,7 +355,7 @@ function AddBookModal({ onClose, onAdded, nextId }) {
 
 function EditBookModal({ book, onClose, onSaved }) {
   const [form, setForm] = useState({ status:book.status||'not read', mood:book.mood||'', pages_read:String(book.pages_read??0), total_pages:String(book.total_pages??''), rating:book.rating!=null?String(book.rating):'', date_started:book.date_started&&book.date_started!=='null'?book.date_started:'', date_finished:book.date_finished&&book.date_finished!=='null'?book.date_finished:'' })
-  const [error, setError]   = useState('')
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
   const submit = async () => {
@@ -358,40 +421,10 @@ function EditBookModal({ book, onClose, onSaved }) {
   )
 }
 
-// ── Heatmap — starts Jan 1, exactly 53 cols, no scroll ────────
+// ── FIX 1: Heatmap — uniform grey cells + immediate local state update ────────
 function Heatmap() {
-  const STORAGE_KEY = 'vault_heatmap'
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-
-  const buildGrid = () => {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    const now   = new Date()
-    const jan1  = new Date(now.getFullYear(), 0, 1)
-    // Sunday on or before Jan 1
-    const start = new Date(jan1)
-    start.setDate(jan1.getDate() - jan1.getDay())
-
-    const cols = []
-    for (let w = 0; w < 53; w++) {
-      const week = []
-      for (let d = 0; d < 7; d++) {
-        const dt = new Date(start)
-        dt.setDate(start.getDate() + w * 7 + d)
-        const key      = dt.toISOString().split('T')[0]
-        const future   = dt > now
-        const preYear  = dt.getFullYear() < now.getFullYear()
-        week.push({
-          key, date: new Date(dt),
-          value: (future || preYear) ? -1 : (saved[key] || 0),
-          pages: saved[key + '_pages'] || 0,
-          inactive: future || preYear,
-        })
-      }
-      cols.push(week)
-    }
-    return cols
-  }
 
   const getMonthLabels = cols => {
     const labels = []; let last = -1
@@ -402,34 +435,32 @@ function Heatmap() {
     return labels
   }
 
+  // FIX: use useState initialised from buildGrid() and rebuild after each log
   const [cols, setCols]         = useState(() => buildGrid())
   const [pages, setPages]       = useState('')
   const [showInput, setShowInput] = useState(false)
 
-  const logToday = () => {
-    const now = new Date()
-    const key = now.toISOString().split('T')[0]
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+  // FIX: recalculate totals directly from cols state so UI is always in sync
+  const flat          = useMemo(() => cols.flat(), [cols])
+  const totalSessions = useMemo(() => flat.filter(c => !c.inactive && c.value > 0).reduce((s,c) => s + c.value, 0), [flat])
+  const totalPages    = useMemo(() => flat.filter(c => !c.inactive).reduce((s,c) => s + c.pages, 0), [flat])
+
+  const logToday = useCallback(() => {
+    const key  = localDateKey(new Date())
+    let saved = {}
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch {}
     saved[key] = (saved[key] || 0) + 1
-    if (pages) saved[key + '_pages'] = (saved[key + '_pages'] || 0) + parseInt(pages)
+    const parsedPages = parseInt(pages) || 0
+    if (parsedPages > 0) saved[key + '_pages'] = (saved[key + '_pages'] || 0) + parsedPages
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
-    setCols(buildGrid()); setPages(''); setShowInput(false)
-  }
+    // Rebuild immediately so the cell colour + totals update without reload
+    setCols(buildGrid())
+    setPages('')
+    setShowInput(false)
+  }, [pages])
 
-  const colorFor = v => {
-    if (v === -1) return 'rgba(255,255,255,0.02)'
-    if (v === 0)  return 'rgba(255,255,255,0.06)'
-    if (v === 1)  return 'rgba(124, 223, 132, 0.35)'
-    if (v === 2)  return 'rgba(81, 175, 83, 0.55)'
-    if (v === 3)  return 'rgba(27, 207, 7, 0.75)'
-    return '#2d9b38'
-  }
-
-  const monthLabels   = getMonthLabels(cols)
-  const flat          = cols.flat()
-  const totalSessions = flat.filter(c => !c.inactive && c.value > 0).reduce((s,c) => s + c.value, 0)
-  const totalPages    = flat.filter(c => !c.inactive).reduce((s,c) => s + c.pages, 0)
-  const N             = cols.length  // 53
+  const N           = cols.length
+  const monthLabels = useMemo(() => getMonthLabels(cols), [cols])
 
   return (
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'12px 18px 10px' }}>
@@ -438,7 +469,10 @@ function Heatmap() {
           <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.75)', textTransform:'uppercase', letterSpacing:'0.1em' }}>
             📅 Reading Activity — {new Date().getFullYear()}
           </h3>
-          <span style={{ fontSize:'0.7rem', color:'rgba(245,244,240,0.5)' }}>{totalSessions} sessions{totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''}</span>
+          {/* FIX: totals now derive from cols state, so they update immediately */}
+          <span style={{ fontSize:'0.7rem', color:'rgba(245,244,240,0.5)' }}>
+            {totalSessions} session{totalSessions !== 1 ? 's' : ''}{totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''}
+          </span>
         </div>
         <button onClick={() => setShowInput(s => !s)} style={{ fontSize:'0.68rem', padding:'4px 10px', borderRadius:'7px', background:'rgba(167,139,250,0.12)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', cursor:'pointer' }}>
           + Log
@@ -446,25 +480,24 @@ function Heatmap() {
       </div>
       {showInput && (
         <div style={{ display:'flex', gap:'8px', marginBottom:'8px', alignItems:'center' }}>
-          <input type="number" min="0" placeholder="Pages read today (optional)" value={pages}
+          <input type="number" min="0" placeholder="Pages read today (DD/MM/YYYY shown on hover)" value={pages}
             onChange={e => setPages(e.target.value)} onKeyDown={e => e.key === 'Enter' && logToday()}
             style={{ flex:1, padding:'6px 10px', borderRadius:'7px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f0ff', outline:'none' }} />
           <button onClick={logToday} style={{ padding:'6px 12px', borderRadius:'7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.75rem' }}>Log</button>
         </div>
       )}
-      {/* Compact fixed-height grid — cells are 9px tall */}
       <div style={{ width:'100%' }}>
         <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px', marginBottom:'2px' }}>
           <div />
           {cols.map((_, i) => {
             const l = monthLabels.find(m => m.i === i)
-            return <div key={i} style={{ fontSize:'0.65rem', color:'rgb(251, 250, 249)', overflow:'hidden', whiteSpace:'nowrap' }}>{l ? l.label : ''}</div>
+            return <div key={i} style={{ fontSize:'0.65rem', color:'rgb(251,250,249)', overflow:'hidden', whiteSpace:'nowrap' }}>{l ? l.label : ''}</div>
           })}
         </div>
         <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px' }}>
           <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
             {DAYS.map((d,i) => (
-              <div key={d} style={{ height:'10px', display:'flex', alignItems:'center', fontSize:'0.55rem', color:'rgb(251, 250, 249)' }}>
+              <div key={d} style={{ height:'10px', display:'flex', alignItems:'center', fontSize:'0.55rem', color:'rgb(251,250,249)' }}>
                 {i % 2 === 1 ? d : ''}
               </div>
             ))}
@@ -473,7 +506,12 @@ function Heatmap() {
             <div key={wi} style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
               {week.map((c, di) => (
                 <div key={di}
-                  title={c.inactive ? '' : `${c.key}${c.value > 0 ? `: ${c.value} session${c.value > 1 ? 's' : ''}` : ''}${c.pages > 0 ? ` · ${c.pages} pages` : ''}`}
+                  title={(() => {
+                    if (c.inactive) return ''
+                    const [y,m,d] = c.key.split('-')
+                    const friendly = `${d}/${m}/${y}`
+                    return `${friendly}${c.value > 0 ? `: ${c.value} session${c.value > 1 ? 's' : ''}` : ''}${c.pages > 0 ? ` · ${c.pages} pages` : ''}`
+                  })()}
                   style={{ height:'9px', borderRadius:'1.5px', background:colorFor(c.value), transition:'transform 0.1s', minWidth:0 }}
                   onMouseEnter={e => { if (!c.inactive) e.currentTarget.style.transform = 'scale(1.6)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }} />
@@ -484,6 +522,7 @@ function Heatmap() {
       </div>
       <div style={{ display:'flex', gap:'5px', alignItems:'center', marginTop:'6px', justifyContent:'flex-end' }}>
         <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>Less</span>
+        {/* FIX: legend now shows v=0 (grey) then the green ramp */}
         {[0,1,2,3,4].map(v => <div key={v} style={{ width:'8px', height:'8px', borderRadius:'1.5px', background:colorFor(v) }} />)}
         <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>More</span>
       </div>
@@ -491,9 +530,9 @@ function Heatmap() {
   )
 }
 
-// ── TBR Jar ───────────────────────────────────────────────────
-function TBRJar() {
-  const [list, setList]       = useState(() => JSON.parse(localStorage.getItem('vault_wtr') || '[]'))
+// ── TBR Jar — unchanged except localStorage (no issues reported) ──────────────
+function TBRJar({ collapsed, onToggle }) {
+  const [list, setList]       = useState(() => { try { return JSON.parse(localStorage.getItem('vault_wtr') || '[]') } catch { return [] } })
   const [input, setInput]     = useState('')
   const [picked, setPicked]   = useState(null)
   const [shaking, setShaking] = useState(false)
@@ -518,22 +557,24 @@ function TBRJar() {
     setTimeout(() => { setPicked(list[Math.floor(Math.random() * list.length)]); setShaking(false) }, 700)
   }
 
-  // Stable decorative slips — only change when count changes
   const slips = useMemo(() => Array.from({ length: Math.min(list.length, 12) }, (_, i) => ({
     w: 22 + (i * 9) % 28, hue: (i * 51) % 360,
     left: 6 + (i * 19) % 46, bot: 3 + (i * 7) % 50,
     rot: -18 + (i * 11) % 36,
   })), [list.length])
 
-  const ROMAN = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'];
+  const ROMAN = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
+
+  // FIX 2: TBR uses the same collapsible panel pattern as library
+  const PREVIEW_COUNT = 5
+  const [expanded, setExpanded] = useState(false)
+  const visibleList = expanded ? list : list.slice(0, PREVIEW_COUNT)
 
   return (
     <div style={{ background:'linear-gradient(155deg, rgba(16,6,34,0.98), rgba(8,4,20,0.99))', border:'1px solid rgba(167,139,250,0.18)', borderRadius:'24px', padding:'28px', boxShadow:'0 16px 56px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
-
-      {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'22px' }}>
         <div>
-          <h3 style={{ fontSize:'0.8rem', color:'rgb(247, 246, 250)', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:'5px' }}>🫙 TBR Jar</h3>
+          <h3 style={{ fontSize:'0.8rem', color:'rgb(247,246,250)', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:'5px' }}>🫙 TBR Jar</h3>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', color:'#c4b5fd', lineHeight:1.4 }}>
             {list.length === 0 ? 'The jar awaits its stories…' : `${list.length} tale${list.length === 1 ? '' : 's'} waiting to be told...`}
           </p>
@@ -548,18 +589,12 @@ function TBRJar() {
         )}
       </div>
 
-      {/* Jar illustration — fixed 150×140, centred */}
       <div style={{ display:'flex', justifyContent:'center', marginBottom:'24px' }}>
         <div style={{ position:'relative', width:'150px', height:'140px', flexShrink:0, animation: shaking ? 'jarShake 0.7s ease' : 'none' }}>
-          {/* Glow halo */}
           <div style={{ position:'absolute', inset:'-24px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.1),transparent 70%)', pointerEvents:'none' }} />
-          {/* Body */}
           <div style={{ position:'absolute', bottom:0, left:'18px', right:'18px', height:'108px', background:'linear-gradient(155deg,rgba(167,139,250,0.07),rgba(124,58,237,0.03))', border:'1.5px solid rgba(167,139,250,0.22)', borderRadius:'10px 10px 20px 20px', overflow:'hidden', backdropFilter:'blur(10px)', boxShadow:'inset 0 0 40px rgba(124,58,237,0.05), 0 12px 40px rgba(0,0,0,0.45)' }}>
-            {/* Glass sheen left */}
             <div style={{ position:'absolute', top:0, left:'9px', width:'9px', bottom:0, background:'linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02))', borderRadius:'2px', pointerEvents:'none' }} />
-            {/* Right shadow */}
             <div style={{ position:'absolute', top:0, right:0, width:'14px', bottom:0, background:'linear-gradient(270deg,rgba(0,0,0,0.18),transparent)', pointerEvents:'none' }} />
-            {/* Paper slips */}
             {slips.map((s,i) => (
               <div key={i} style={{ position:'absolute', width:`${s.w}px`, height:'9px', background:`linear-gradient(90deg,hsl(${s.hue},65%,65%),hsl(${s.hue+28},55%,75%))`, borderRadius:'2px', opacity:0.72, left:`${s.left}%`, bottom:`${s.bot}%`, transform:`rotate(${s.rot}deg)`, boxShadow:'0 2px 6px rgba(0,0,0,0.35)' }} />
             ))}
@@ -570,19 +605,16 @@ function TBRJar() {
               </div>
             )}
           </div>
-          {/* Lid */}
           <div style={{ position:'absolute', top:'6px', left:'12px', right:'12px', height:'32px', background:'linear-gradient(180deg,rgba(167,139,250,0.22),rgba(124,58,237,0.1))', border:'1.5px solid rgba(167,139,250,0.32)', borderRadius:'12px 12px 6px 6px', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
             <div style={{ position:'absolute', top:'6px', left:'7px', right:'7px', height:'2px', background:'rgba(167,139,250,0.22)', borderRadius:'1px' }} />
             <div style={{ position:'absolute', top:'11px', left:'12px', right:'12px', height:'1px', background:'rgba(167,139,250,0.1)', borderRadius:'1px' }} />
           </div>
-          {/* Count badge */}
           {list.length > 0 && (
             <div style={{ position:'absolute', top:'-10px', right:'-8px', minWidth:'27px', height:'27px', borderRadius:'99px', padding:'0 7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', color:'white', fontWeight:'700', boxShadow:'0 0 16px rgba(124,58,237,0.7)' }}>{list.length}</div>
           )}
         </div>
       </div>
 
-      {/* Picked highlight */}
       {picked && (
         <div style={{ marginBottom:'20px', padding:'16px 20px', background:'linear-gradient(135deg,rgba(249,168,212,0.07),rgba(124,58,237,0.07))', border:'1px solid rgba(249,168,212,0.2)', borderRadius:'16px', animation:'fadein 0.4s ease', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', top:'-30px', right:'-30px', width:'90px', height:'90px', borderRadius:'50%', background:'rgba(249,168,212,0.07)', filter:'blur(20px)', pointerEvents:'none' }} />
@@ -591,10 +623,8 @@ function TBRJar() {
         </div>
       )}
 
-      {/* Thin divider */}
       <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,rgba(167,139,250,0.18),transparent)', marginBottom:'20px' }} />
 
-      {/* Input row */}
       <div style={{ display:'flex', gap:'10px', marginBottom:'20px' }}>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
@@ -606,41 +636,48 @@ function TBRJar() {
           onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 0 18px rgba(124,58,237,0.4)' }}>+</button>
       </div>
 
-      {/* Book list — aesthetic serif titles with numerals */}
       {list.length === 0 ? (
-        <p style={{ fontSize:'0.95rem', color:'rgba(244, 244, 243, 0.94)', textAlign:'center', padding:'14px 0' }}>Drop some books in the jar…</p>
+        <p style={{ fontSize:'0.95rem', color:'rgba(244,244,243,0.94)', textAlign:'center', padding:'14px 0' }}>Drop some books in the jar…</p>
       ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:'4px', maxHeight:'280px', overflowY:'auto', paddingRight:'2px' }}>
-          {list.map((b, idx) => {
-            const isPicked = picked?.id === b.id
-            return (
-              <div key={b.id}
-                style={{ display:'flex', alignItems:'center', gap:'12px', padding:'11px 14px', borderRadius:'13px', background:isPicked?'rgba(249,168,212,0.06)':'rgba(255,255,255,0.025)', border:`1px solid ${isPicked?'rgba(249,168,212,0.2)':'rgba(255,255,255,0.05)'}`, transition:'all 0.22s', cursor:'default' }}
-                onMouseEnter={e => { if (!isPicked) { e.currentTarget.style.background='rgba(167,139,250,0.055)'; e.currentTarget.style.borderColor='rgba(167,139,250,0.14)' }}}
-                onMouseLeave={e => { if (!isPicked) { e.currentTarget.style.background='rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.05)' }}}>
-                {/* Numeral */}
-                <span style={{ fontSize:'0.65rem', color:isPicked?'rgba(249,168,212,0.6)':'rgba(167,139,250,0.4)', letterSpacing:'0.06em', flexShrink:0, minWidth:'18px', textAlign:'right', lineHeight:1 }}>{ROMAN[idx] || idx+1}.</span>
-                {/* Title — shimmer gradient on picked, soft gradient otherwise */}
-                <span style={{
-                  fontSize:'0.9rem', fontWeight: isPicked ? '600' : '400',
-                  flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  letterSpacing:'0.015em', lineHeight:1.35,
-                  background: isPicked
-                    ? 'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)'
-                    : 'linear-gradient(90deg,rgba(245,244,240,0.85) 0%,rgba(196,181,253,0.8) 60%,rgba(245,244,240,0.85) 100%)',
-                  backgroundSize: '200% auto',
-                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-                  animation: isPicked ? 'tbrShimmer 2.2s linear infinite' : 'none',
-                }}>{b.title}</span>
-                {/* Remove */}
-                <button onClick={() => remove(b.id)}
-                  style={{ background:'none', border:'none', color:'rgba(245,244,240,0.18)', cursor:'pointer', fontSize:'0.7rem', padding:'0 2px', transition:'color 0.2s', flexShrink:0, lineHeight:1 }}
-                  onMouseEnter={e => e.currentTarget.style.color='#f87171'}
-                  onMouseLeave={e => e.currentTarget.style.color='rgba(245,244,240,0.18)'}>✕</button>
-              </div>
-            )
-          })}
-        </div>
+        <>
+          <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
+            {visibleList.map((b, idx) => {
+              const isPicked = picked?.id === b.id
+              return (
+                <div key={b.id}
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'11px 14px', borderRadius:'13px', background:isPicked?'rgba(249,168,212,0.06)':'rgba(255,255,255,0.025)', border:`1px solid ${isPicked?'rgba(249,168,212,0.2)':'rgba(255,255,255,0.05)'}`, transition:'all 0.22s', cursor:'default' }}
+                  onMouseEnter={e => { if (!isPicked) { e.currentTarget.style.background='rgba(167,139,250,0.055)'; e.currentTarget.style.borderColor='rgba(167,139,250,0.14)' }}}
+                  onMouseLeave={e => { if (!isPicked) { e.currentTarget.style.background='rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.05)' }}}>
+                  <span style={{ fontSize:'0.65rem', color:isPicked?'rgba(249,168,212,0.6)':'rgba(167,139,250,0.4)', letterSpacing:'0.06em', flexShrink:0, minWidth:'18px', textAlign:'right', lineHeight:1 }}>{ROMAN[idx] || idx+1}.</span>
+                  <span style={{
+                    fontSize:'0.9rem', fontWeight:isPicked?'600':'400',
+                    flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                    letterSpacing:'0.015em', lineHeight:1.35,
+                    background: isPicked
+                      ? 'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)'
+                      : 'linear-gradient(90deg,rgba(245,244,240,0.85) 0%,rgba(196,181,253,0.8) 60%,rgba(245,244,240,0.85) 100%)',
+                    backgroundSize:'200% auto',
+                    WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+                    animation: isPicked ? 'tbrShimmer 2.2s linear infinite' : 'none',
+                  }}>{b.title}</span>
+                  <button onClick={() => remove(b.id)}
+                    style={{ background:'none', border:'none', color:'rgba(245,244,240,0.18)', cursor:'pointer', fontSize:'0.7rem', padding:'0 2px', transition:'color 0.2s', flexShrink:0, lineHeight:1 }}
+                    onMouseEnter={e => e.currentTarget.style.color='#f87171'}
+                    onMouseLeave={e => e.currentTarget.style.color='rgba(245,244,240,0.18)'}>✕</button>
+                </div>
+              )
+            })}
+          </div>
+          {/* FIX 2: collapsible toggle for TBR list */}
+          {list.length > PREVIEW_COUNT && (
+            <button onClick={() => setExpanded(o => !o)}
+              style={{ marginTop:'10px', width:'100%', padding:'9px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.13)'; e.currentTarget.style.color='#a78bfa' }}
+              onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(196,181,253,0.7)' }}>
+              {expanded ? `↑ Show less` : `↓ Show all ${list.length} titles`}
+            </button>
+          )}
+        </>
       )}
 
       <style>{`
@@ -657,23 +694,6 @@ function TBRJar() {
           100%{ background-position:-200% center }
         }
       `}</style>
-    </div>
-  )
-}
-
-function MoodFilter({ selectedMood, onChange }) {
-  const moods = [{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS]
-  return (
-    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
-      <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎭 Filter by Mood</h3>
-      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-        {moods.map(m=>(
-          <button key={m.value} onClick={()=>onChange(m.value)}
-            style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s' }}>
-            {m.label}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
@@ -793,17 +813,44 @@ function Challenges() {
   )
 }
 
+// Show ALL mood options always; filtering still works correctly via displayed memo
+function MoodFilterPanel({ selectedMood, onChange, books }) {
+  const moods = [{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS]
+
+  return (
+    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
+      <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎭 Filter by Mood</h3>
+      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+        {moods.map(m => {
+          const count = m.value === 'all'
+            ? books.length
+            : books.filter(b => b.mood === m.value).length
+          return (
+            <button key={m.value} onClick={() => onChange(m.value)}
+              style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s', position:'relative' }}>
+              {m.label}
+              {count > 0 && m.value !== 'all' && (
+                <span style={{ marginLeft:'5px', fontSize:'0.62rem', opacity:0.6 }}>({count})</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
-  const [books, setBooks]             = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [sortBy, setSortBy]           = useState(() => localStorage.getItem('vault_sortBy') || '')
-  const [sortOrder, setSortOrder]     = useState(() => localStorage.getItem('vault_sortOrder') || 'desc')
-  const [filter, setFilter]           = useState(() => localStorage.getItem('vault_filter') || 'all')
+  const [books, setBooks]               = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [sortBy, setSortBy]             = useState(() => localStorage.getItem('vault_sortBy') || '')
+  const [sortOrder, setSortOrder]       = useState(() => localStorage.getItem('vault_sortOrder') || 'desc')
+  const [filter, setFilter]             = useState(() => localStorage.getItem('vault_filter') || 'all')
   const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem('vault_mood') || 'all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingBook, setEditingBook]   = useState(null)
   const [shelfSelected, setShelfSelected] = useState(null)
-  const [libOpen, setLibOpen]         = useState(false)
+  const [libOpen, setLibOpen]           = useState(false)
   const [particles] = useState(()=>Array.from({length:30},(_,i)=>({ id:i, x:Math.random()*100, y:Math.random()*100, size:Math.random()*2+1, duration:Math.random()*6+4, delay:Math.random()*5 })))
 
   const setSortByP    = v => { setSortBy(v);       localStorage.setItem('vault_sortBy', v) }
@@ -825,13 +872,27 @@ export default function App() {
     fetchBooks()
   }
 
-  const displayed = useMemo(() => books
-    .filter(b => (filter==='all'||b.status===filter) && (selectedMood==='all'||b.mood===selectedMood))
-    .sort((a,b) => {
-      if(!sortBy) return 0
-      if(sortOrder==='asc') return a[sortBy]>b[sortBy]?1:-1
-      return a[sortBy]<b[sortBy]?1:-1
-    }), [books,filter,selectedMood,sortBy,sortOrder])
+  // When a specific mood is active, ignore status filter — show ALL books with that mood
+  // Also deduplicate by title+author in case DB already has duplicates
+  const displayed = useMemo(() => {
+    const normalize = s => (s || '').toString().trim().toLowerCase()
+    const seen = new Set()
+    return books
+      .filter(b => {
+        const key = `${normalize(b.title)}|||${normalize(b.author)}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        const moodActive = selectedMood !== 'all'
+        const statusOk   = moodActive ? true : (filter === 'all' || b.status === filter)
+        const moodOk     = selectedMood === 'all' || normalize(b.mood) === normalize(selectedMood)
+        return statusOk && moodOk
+      })
+      .sort((a,b) => {
+        if(!sortBy) return 0
+        if(sortOrder==='asc') return a[sortBy]>b[sortBy]?1:-1
+        return a[sortBy]<b[sortBy]?1:-1
+      })
+  }, [books, filter, selectedMood, sortBy, sortOrder])
 
   const stats = { total:books.length, completed:books.filter(b=>b.status==='completed').length, reading:books.filter(b=>b.status==='reading').length }
   const STAT_CARDS = [
@@ -839,6 +900,9 @@ export default function App() {
     { label:'Completed',   value:stats.completed, icon:'✅', key:'completed' },
     { label:'Reading',     value:stats.reading,   icon:'📖', key:'reading'   },
   ]
+
+  // Reset libOpen when filter/mood changes so the view collapses back to 3 rows
+  useEffect(() => { setLibOpen(false) }, [filter, selectedMood])
 
   return (
     <>
@@ -863,6 +927,7 @@ export default function App() {
             <div key={p.id} style={{ position:'absolute', left:`${p.x}%`, top:`${p.y}%`, width:`${p.size}px`, height:`${p.size}px`, borderRadius:'50%', background:'rgba(167,139,250,0.6)', animation:`float ${p.duration}s ${p.delay}s ease-in-out infinite` }} />
           ))}
         </div>
+
         <div style={{ position:'relative', zIndex:1, maxWidth:'1500px', margin:'0 auto', padding:'48px 24px' }}>
 
           <header style={{ textAlign:'center', marginBottom:'40px', animation:'fadein 0.8s ease' }}>
@@ -889,21 +954,19 @@ export default function App() {
           {/* Heatmap */}
           <div style={{ marginBottom:'36px' }}><Heatmap /></div>
 
-          {/* Two-column layout */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'28px', alignItems:'start' }}>
+          {/* Two-column layout — stretch so both sides grow together */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'28px', alignItems:'stretch' }}>
 
             {/* ── LEFT COLUMN ── */}
             <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-              {/* ── MY LIBRARY — always open, show first 3, expand for more ── */}
+              {/* My Library — collapsible after first 3 books */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', overflow:'hidden' }}>
-                {/* Header */}
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 14px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                    <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.2rem', fontWeight:'700', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(167,139,250,0.8)' }}>✦ My Library ✦ </h2>
+                    <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.2rem', fontWeight:'700', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(167,139,250,0.8)' }}>✦ My Library ✦</h2>
                     <span style={{ fontSize:'0.68rem', background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', borderRadius:'99px', padding:'2px 10px' }}>{displayed.length} books</span>
                   </div>
-                  {/* Sort + Add inside library header */}
                   <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
                     <select value={sortBy} onChange={e=>setSortByP(e.target.value)} style={{ padding:'6px 10px', borderRadius:'9px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', color:'#e0d7ff', outline:'none' }}>
                       <option value="">Sort…</option>
@@ -918,25 +981,29 @@ export default function App() {
                     <button onClick={()=>setShowAddModal(true)} style={{ padding:'6px 16px', borderRadius:'9px', cursor:'pointer', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', fontWeight:'600', fontSize:'0.78rem', whiteSpace:'nowrap' }}>+ Add</button>
                   </div>
                 </div>
-                {/* Books — always show first 3, rest hidden behind toggle */}
                 <div style={{ padding:'0 16px 16px' }}>
                   {loading ? (
                     <div style={{ textAlign:'center', color:'#e0d7ff', padding:'32px' }}>✨ Opening the vault…</div>
                   ) : displayed.length === 0 ? (
-                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'28px', fontStyle:'italic' }}>No books match your filters.</div>
+                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'28px', fontStyle:'italic' }}>
+                      {selectedMood !== 'all'
+                        ? <>No books tagged as <span style={{color:'#a78bfa'}}>{MOOD_OPTIONS.find(m=>m.value===selectedMood)?.label || selectedMood}</span>.<br/><span style={{fontSize:'0.72rem'}}>Open a book card and click Edit to assign a mood.</span></>
+                        : 'No books match your filters.'
+                      }
+                    </div>
                   ) : (
                     <>
+                      {/* Collapse after first 3 rows (9 cards at 3-col grid) */}
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' }}>
-                        {(libOpen ? displayed : displayed.slice(0,3)).map((book,i) => (
+                        {(libOpen ? displayed : displayed.slice(0,9)).map((book,i) => (
                           <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={setEditingBook} style={{ animationDelay:`${i*0.05}s` }} />
                         ))}
                       </div>
-                      {/* Show more / less toggle — only appears when there are more than 3 books */}
-                      {displayed.length > 3 && (
+                      {displayed.length > 9 && (
                         <button onClick={()=>setLibOpen(o=>!o)}
-                          style={{ marginTop:'14px', width:'100%', padding:'10px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgb(125, 98, 180)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
+                          style={{ marginTop:'14px', width:'100%', padding:'10px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
                           onMouseEnter={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.13)'; e.currentTarget.style.color='#a78bfa' }}
-                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(249, 247, 254, 0.7)' }}>
+                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(196,181,253,0.7)' }}>
                           {libOpen ? `↑ Show less` : `↓ Show all ${displayed.length} books`}
                         </button>
                       )}
@@ -945,18 +1012,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ── FILTER BY MOOD — always visible, original style ── */}
-              <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
-                <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎭 Filter by Mood</h3>
-                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-                  {[{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS].map(m=>(
-                    <button key={m.value} onClick={()=>setMoodP(m.value)}
-                      style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s' }}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* FIX 3: MoodFilterPanel now receives books prop so it shows only used moods */}
+              <MoodFilterPanel selectedMood={selectedMood} onChange={setMoodP} books={books} />
 
               {/* TBR Jar */}
               <TBRJar />
@@ -965,7 +1022,6 @@ export default function App() {
 
             {/* ── RIGHT COLUMN ── */}
             <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-              {/* Bookshelf */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>📚 Bookshelf</h3>
                 <Bookshelf books={displayed} selectedBook={shelfSelected} onSelect={b=>setShelfSelected(prev=>prev?.id===b.id?null:b)} />
@@ -975,6 +1031,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+
               {/* Genres */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>✦ Genres</h3>
@@ -987,6 +1044,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
+
               <ReadingGoals completedCount={stats.completed} />
               <Challenges />
             </div>
@@ -994,7 +1052,8 @@ export default function App() {
           </div>
         </div>
       </div>
-      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} nextId={books.length?Math.max(...books.map(b=>b.id))+1:1} />}
+
+      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} nextId={books.length?Math.max(...books.map(b=>b.id))+1:1} existingBooks={books} />}
       {editingBook  && <EditBookModal book={editingBook} onClose={()=>setEditingBook(null)} onSaved={fetchBooks} />}
     </>
   )
