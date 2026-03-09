@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
 from datetime import date
 from sqlalchemy.orm import Session
-from backend.database import get_db
-from backend.models import Book as BookModel
+from database import get_db
+from models import Book as BookModel
 import json
 
 app = FastAPI()

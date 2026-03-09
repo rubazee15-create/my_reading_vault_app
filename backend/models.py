@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float
-from backend.database import Base
+from database import Base
 
 # Making a Pydantic model for the Book table in the database.
 class Book(Base):
