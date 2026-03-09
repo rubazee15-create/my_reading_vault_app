@@ -62,7 +62,7 @@ Following the modular approach:
 * [x] Reading goals, heatmap, challenges
 
 #### **🟡 Phase 3: Security & Relationships (Current)** 
-* [ ] Database Migrations: Integrate Alembic to handle schema changes without losing data.
+* [x] Database Migrations: Integrate Alembic to handle schema changes without losing data.
 * [ ] Multi-Tenancy: Add Users table and associate books with specific user IDs.
 * [ ] User Authentication: Implement OAuth2 with JWT (JSON Web Tokens) and refresh token strategy.
 * [ ] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
