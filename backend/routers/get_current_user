@@ -1,0 +1,9 @@
+from fastapi.params import Depends
+
+from auth import get_current_user
+from models import User
+
+# Addin the get_current_user function to the auth.py file.
+# The get_current_user is added as a dependency to every endpoint. This means only the loggin in users gave access to the endpoints. 
+
+current_user = Depends(get_current_user)

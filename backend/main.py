@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
 from datetime import date
 from sqlalchemy.orm import Session
+from auth import get_current_user
 from database import get_db
-from models import Book as BookModel
+from models import Book as BookModel, User
 import json
 from routers.auth_router import router as auth_router
 
@@ -33,7 +34,6 @@ app.add_middleware(
 # Making a class that will inheret the base model - Making a Pydantic model for creating new book in the database (JSON file)
 class Book(BaseModel):
     # Building fields that are required to create a Book (e.g. refer to books.json fields) - with description and annotations
-    id: Annotated[int, Field(..., description="Book ID", example=1)]
     title: Annotated[str, Field(..., description="Title of the book", example="Fourth Wing")]
     author: Annotated[str, Field(..., description="Author of the book", example="Rebecca Yarros")]
     genre: Annotated[str, Field(..., description="Genre of the book", example="Fantasy")]
@@ -128,24 +128,24 @@ def about():            # This endpoint will provide information about the API a
     return {"message": "This is a fully functional API to track and manage your reading habits."}
 
 @app.get("/view_books")
-def view_books(db: Session = Depends(get_db)):  # This endpoint will allow users to view all the books they have added to their reading vault.
-    books = db.query(BookModel).all()
+def view_books(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):  # This endpoint will allow users to view all the books they have added to their reading vault.
+    books = db.query(BookModel).filter(BookModel.owner_id == current_user.id).all()
     return books
 
 # Including new operations to understand path parameters and query parameters in FastAPI.
 
 # Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
-def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0), db: Session = Depends(get_db)):
+def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
-    book = db.query(BookModel).filter(BookModel.id == book_id).first()
+    book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found!")
     return book
 
 @app.get("/book_title/{book_title}")
-def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing"), db: Session = Depends(get_db)):
-    book = db.query(BookModel).filter(BookModel.title.ilike(f"%{book_title}%")).first()
+def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing"), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(BookModel).filter(BookModel.title.ilike(f"%{book_title}%"), BookModel.owner_id == current_user.id).first()
     if not book:
         raise HTTPException(status_code=400, detail="Book title not found!")
     return book
@@ -154,8 +154,9 @@ def view_book_title(book_title: str = Path(..., description="Add the Title of th
 @app.get("/sort")
 def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), 
                order: str = Query("asc", description= "Sort in ascending or descending order"),
-               db: Session = Depends(get_db)
-               ):
+               db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)
+            ):
     
     valid_fields = ["total_pages", "rating", "author", "genre"]
 
@@ -169,20 +170,19 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'tota
     if order == "desc":
         column = column.desc()
 
-    books = db.query(BookModel).order_by(column).all()
+    books = db.query(BookModel).filter(BookModel.owner_id == current_user.id).order_by(column).all()
     return books
 
 # Making an endpoint for the fields we entered in the class with the help of Pydantic model
 # Making a POST (Create) endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
 @app.post("/create")
-def create_book(book: Book, db: Session = Depends(get_db)):
-    existing = db.query(BookModel).filter(BookModel.id == book.id).first()
+def create_book(book: Book, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    existing = db.query(BookModel).filter(BookModel.title == book.title, BookModel.owner_id == current_user.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Book already exists!")
     
     # Creating new book
     new_book = BookModel(
-        id=book.id,
         title=book.title,
         author=book.author,
         genre=book.genre,
@@ -191,7 +191,8 @@ def create_book(book: Book, db: Session = Depends(get_db)):
         total_pages=book.total_pages,
         rating=book.rating,
         date_started=book.date_started,
-        date_finished=book.date_finished
+        date_finished=book.date_finished,
+        owner_id=current_user.id
     )
     db.add(new_book)
     db.commit()
@@ -205,8 +206,8 @@ def create_book(book: Book, db: Session = Depends(get_db)):
 # First, a new Pydantic model will be made so that all the fields made this time become Optional instead of Required
 # The new Pydantic model is made right below the first Pydantic model 
 @app.put("/edit/{book_id}")
-def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db)):
-    book = db.query(BookModel).filter(BookModel.id == book_id).first()
+def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found!")
     
@@ -220,8 +221,8 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
 
 # Making a DELETE endpoint
 @app.delete("/delete/{book_id}")
-def delete_book(book_id: int, db: Session = Depends(get_db)):
-    book = db.query(BookModel).filter(BookModel.id == book_id).first()
+def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found!")
 
