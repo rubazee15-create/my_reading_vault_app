@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Book as BookModel
 import json
+from routers.auth_router import router as auth_router
+
+
 
 app = FastAPI()
 
@@ -227,4 +230,5 @@ def delete_book(book_id: int, db: Session = Depends(get_db)):
     return JSONResponse(status_code=200, content={"message":"Book deleted successfully!"})
 
 
-
+# Registering the router for authentication endpoints
+app.include_router(auth_router)
