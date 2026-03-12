@@ -12,6 +12,14 @@ class User(Base):
 
     books = relationship("Book", back_populates="owner")
 
+class Author(Base):
+    __tablename__ = "authors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
+
+    books = relationship("Book", back_populates="author")
+
 # Making a Pydantic model for the Book table in the database.
 class Book(Base):
     __tablename__ = "books"
@@ -27,4 +35,7 @@ class Book(Base):
     date_started = Column(String, nullable=True)
     date_finished = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    author_id = Column(Integer, ForeignKey("authors.id"), nullable=True)
+
     owner = relationship("User", back_populates="books")
+    author_rel = relationship("Author", back_populates="books")

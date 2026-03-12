@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
-from models import Book as BookModel, User
+from models import Book as BookModel, User, Author as AuthorModel
 import json
 from routers.auth_router import router as auth_router
 
@@ -233,3 +233,30 @@ def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User 
 
 # Registering the router for authentication endpoints
 app.include_router(auth_router)
+
+# New Pydantic model for Author creation
+class AuthorCreate(BaseModel):
+    name: str
+
+@app.post("/authors")
+def create_author(author: AuthorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    existing = db.query(AuthorModel).filter(AuthorModel.name == author.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Author already exists!")
+    new_author = AuthorModel(name=author.name)
+    db.add(new_author)
+    db.commit()
+    db.refresh(new_author)
+    return new_author
+
+@app.get("/authors")
+def get_authors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return db.query(AuthorModel).all()
+
+@app.get("/authors/{author_id}/books")
+def get_books_by_author(author_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    author = db.query(AuthorModel).filter(AuthorModel.id == author_id).first()
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found!")
+    books = db.query(BookModel).filter(BookModel.author_id == author_id, BookModel.owner_id == current_user.id).all()
+    return {"author": author.name, "books": books}
