@@ -18,7 +18,7 @@ class Author(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False, index=True)
 
-    books = relationship("Book", back_populates="author")
+    books = relationship("Book", back_populates="author_rel")
 
 # Making a Pydantic model for the Book table in the database.
 class Book(Base):
