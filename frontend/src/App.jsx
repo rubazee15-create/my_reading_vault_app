@@ -3,6 +3,18 @@ import axios from 'axios'
 
 const API = 'http://127.0.0.1:8000'
 
+// ── Token helpers ──────────────────────────────────────────────
+const getToken    = () => localStorage.getItem('vault_token')
+const setToken    = (t) => localStorage.setItem('vault_token', t)
+const removeToken = () => localStorage.removeItem('vault_token')
+
+// Attach token to every axios request automatically
+axios.interceptors.request.use(config => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
 const STATUS_CONFIG = {
   'completed': { label:'Completed', color:'#7de482', bg:'rgba(58,147,86,0.15)',   glow:'0 0 20px rgba(137,230,129,0.4)' },
   'reading':   { label:'Reading',   color:'#f9a8d4', bg:'rgba(249,168,212,0.15)', glow:'0 0 20px rgba(249,168,212,0.4)' },
@@ -25,20 +37,19 @@ const SPINE_PALETTES = [
 ]
 
 const MOOD_OPTIONS = [
-  { value: 'mystical', label: '🔮 Mystical' },
-  { value: 'dark',     label: '🌑 Dark'     },
-  { value: 'cozy',     label: '☕ Cozy'     },
-  { value: 'epic',     label: '⚔️ Epic'     },
-  { value: 'romantic', label: '🌹 Romantic' },
-  { value: 'whimsical', label: '🦄 Whimsical' },
-  { value: 'shattering', label: '💔 Shattering' },
-  { value: 'relatable', label: '🤗 Relatable' },
+  { value: 'mystical',   label: '🔮 Mystical'   },
+  { value: 'dark',       label: '🌑 Dark'        },
+  { value: 'cozy',       label: '☕ Cozy'        },
+  { value: 'epic',       label: '⚔️ Epic'        },
+  { value: 'romantic',   label: '🌹 Romantic'    },
+  { value: 'whimsical',  label: '🦄 Whimsical'   },
+  { value: 'shattering', label: '💔 Shattering'  },
+  { value: 'relatable',  label: '🤗 Relatable'   },
 ]
 
 const STORAGE_KEY = 'vault_heatmap'
 
-// ── Heatmap helpers (module-level so they're stable) ──────────
-// Helper: get local YYYY-MM-DD key for any Date object (avoids UTC off-by-one)
+// ── Heatmap helpers ────────────────────────────────────────────
 function localDateKey(dt) {
   const yyyy = dt.getFullYear()
   const mm   = String(dt.getMonth() + 1).padStart(2, '0')
@@ -53,14 +64,12 @@ function buildGrid() {
   const jan1 = new Date(now.getFullYear(), 0, 1)
   const start = new Date(jan1)
   start.setDate(jan1.getDate() - jan1.getDay())
-
   const cols = []
   for (let w = 0; w < 53; w++) {
     const week = []
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start)
       dt.setDate(start.getDate() + w * 7 + d)
-      // Use local date key — same format logToday saves with
       const key     = localDateKey(dt)
       const future  = dt > now
       const preYear = dt.getFullYear() < now.getFullYear()
@@ -76,16 +85,90 @@ function buildGrid() {
   return cols
 }
 
-// FIX 1: consistent colour function — inactive cells always use the SAME rgba value
 function colorFor(v) {
-  if (v === -1) return 'rgba(255,255,255,0.045)'   // inactive (future / pre-year)
-  if (v === 0)  return 'rgba(255,255,255,0.045)'   // SAME shade as inactive → uniform grey
+  if (v === -1) return 'rgba(255,255,255,0.045)'
+  if (v === 0)  return 'rgba(255,255,255,0.045)'
   if (v === 1)  return 'rgba(124,223,132,0.35)'
   if (v === 2)  return 'rgba(81,175,83,0.55)'
   if (v === 3)  return 'rgba(27,207,7,0.75)'
   return '#2d9b38'
 }
 
+// ── Auth Page ──────────────────────────────────────────────────
+function AuthPage({ onLogin }) {
+  const [mode, setMode]         = useState('login')
+  const [email, setEmail]       = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+
+  const submit = async () => {
+    setError(''); setLoading(true)
+    try {
+      if (mode === 'register') {
+        await axios.post(`${API}/auth/register`, { username, email, password })
+        setMode('login')
+        setError('Registered! Please log in.')
+        setLoading(false)
+        return
+      }
+      const form = new URLSearchParams()
+      form.append('username', email)
+      form.append('password', password)
+      const res = await axios.post(`${API}/auth/login`, form)
+      setToken(res.data.access_token)
+      onLogin()
+    } catch(e) {
+      setError(e.response?.data?.detail || 'Something went wrong.')
+    }
+    setLoading(false)
+  }
+
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:'12px', fontSize:'0.88rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'#f1f0ff', outline:'none', boxSizing:'border-box' }
+
+  return (
+    <div style={{ minHeight:'100vh', width:'100%', background:'#0d0a1a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans',sans-serif", position:'relative', overflow:'hidden' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
+      {/* background glow */}
+      <div style={{ position:'absolute', top:'-10%', left:'-5%', width:'500px', height:'500px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.15),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:'400px', height:'400px', borderRadius:'50%', background:'radial-gradient(circle,rgba(249,168,212,0.1),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }} />
+
+      <div style={{ background:'linear-gradient(135deg,#1a1030,#120d25)', border:'1px solid rgba(167,139,250,0.25)', borderRadius:'24px', padding:'40px', width:'100%', maxWidth:'400px', boxShadow:'0 0 60px rgba(167,139,250,0.15)', position:'relative', zIndex:1 }}>
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'2.2rem', color:'#f1f0ff', textAlign:'center', marginBottom:'6px' }}>My Reading Vault</h1>
+        <p style={{ textAlign:'center', color:'rgba(167,139,250,0.6)', fontSize:'0.8rem', marginBottom:'28px' }}>✦ Your Literary Sanctuary ✦</p>
+
+        <div style={{ display:'flex', gap:'8px', marginBottom:'24px' }}>
+          {['login','register'].map(m => (
+            <button key={m} onClick={() => { setMode(m); setError('') }}
+              style={{ flex:1, padding:'9px', borderRadius:'10px', cursor:'pointer', background:mode===m?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${mode===m?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:mode===m?'#a78bfa':'rgba(255,255,255,0.4)', fontSize:'0.82rem', fontWeight:mode===m?'600':'400', textTransform:'capitalize' }}>
+              {m}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          {mode === 'register' && (
+            <input placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} style={inp} />
+          )}
+          <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={inp} />
+          <input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} style={inp} />
+        </div>
+
+        {error && (
+          <p style={{ color: error.includes('Registered') ? '#7de482' : '#f87171', fontSize:'0.82rem', marginTop:'12px' }}>{error}</p>
+        )}
+
+        <button onClick={submit} disabled={loading}
+          style={{ marginTop:'20px', width:'100%', padding:'12px', borderRadius:'12px', cursor:'pointer', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', fontSize:'0.9rem', fontWeight:'600', boxShadow:'0 0 20px rgba(124,58,237,0.4)', opacity:loading?0.7:1 }}>
+          {loading ? '...' : mode === 'login' ? 'Enter the Vault 🔮' : 'Create Account ✨'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Shared UI Components ───────────────────────────────────────
 function Stars({ rating }) {
   return (
     <div style={{ display:'flex', gap:'2px' }}>
@@ -137,8 +220,8 @@ function BookCover({ title, author }) {
 
 function BookSpine({ book, index, isSelected, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const palette  = SPINE_PALETTES[index % SPINE_PALETTES.length]
-  const height   = 110 + Math.min((book.total_pages || 300) / 600, 1) * 30
+  const palette   = SPINE_PALETTES[index % SPINE_PALETTES.length]
+  const height    = 110 + Math.min((book.total_pages || 300) / 600, 1) * 30
   const thickness = 28
   const statusDot = book.status === 'reading' ? '#decb60' : book.status === 'completed' ? '#95d250' : '#dc1111'
   return (
@@ -167,7 +250,6 @@ function Bookshelf({ books, selectedBook, onSelect }) {
   const shelf2 = books.slice(mid)
   const ShelfRow = ({ shelfBooks, startIndex }) => (
     <div style={{ position:'relative', marginBottom:'2px' }}>
-      <div style={{ position:'absolute', inset:0, background:'repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(255,255,255,0.015) 59px, rgba(255,255,255,0.015) 60px)', pointerEvents:'none' }} />
       <div style={{ display:'flex', alignItems:'flex-end', gap:'3px', padding:'16px 16px 0', minHeight:'160px', position:'relative', zIndex:1 }}>
         {shelfBooks.map((book, i) => (
           <BookSpine key={book.id} book={book} index={startIndex + i} isSelected={selectedBook?.id === book.id} onClick={onSelect} />
@@ -177,9 +259,7 @@ function Bookshelf({ books, selectedBook, onSelect }) {
           <div style={{ width:'18px', height:'18px', borderRadius:'50%', background:'radial-gradient(circle at 35% 35%, #d51acc, #951d65)', boxShadow:'0 0 10px rgba(234,58,237,0.5)', marginBottom:'2px' }} />
         </div>
       </div>
-      <div style={{ height:'14px', background:'linear-gradient(180deg, #7c4a1e 0%, #5c3010 50%, #3d1f08 100%)', borderRadius:'1px', boxShadow:'0 5px 15px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)', margin:'0 6px', position:'relative' }}>
-        <div style={{ position:'absolute', top:'3px', left:'10%', right:'10%', height:'1px', background:'rgba(255,255,255,0.06)' }} />
-      </div>
+      <div style={{ height:'14px', background:'linear-gradient(180deg, #7c4a1e 0%, #5c3010 50%, #3d1f08 100%)', borderRadius:'1px', boxShadow:'0 5px 15px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)', margin:'0 6px' }} />
       <div style={{ height:'8px', background:'linear-gradient(180deg,rgba(0,0,0,0.35),transparent)', margin:'0 6px' }} />
     </div>
   )
@@ -239,8 +319,8 @@ function BookDetailPanel({ book, onClose, onEdit }) {
 }
 
 function BookCard({ book, onDelete, onEdit, style }) {
-  const cfg    = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
-  const pct    = book.total_pages > 0 ? Math.round((book.pages_read / book.total_pages) * 100) : 0
+  const cfg     = STATUS_CONFIG[book.status] || STATUS_CONFIG['not read']
+  const pct     = book.total_pages > 0 ? Math.round((book.pages_read / book.total_pages) * 100) : 0
   const moodObj = MOOD_OPTIONS.find(m => m.value === book.mood)
   return (
     <div style={{ background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', padding:'20px', transition:'transform 0.3s,box-shadow 0.3s', position:'relative', overflow:'hidden', cursor:'pointer', ...style }}
@@ -282,7 +362,7 @@ function BookCard({ book, onDelete, onEdit, style }) {
   )
 }
 
-function AddBookModal({ onClose, onAdded, nextId, existingBooks }) {
+function AddBookModal({ onClose, onAdded, existingBooks }) {
   const [form, setForm] = useState({ title:'', author:'', genre:'', status:'not read', mood:'', pages_read:'0', total_pages:'', rating:'', date_started:'', date_finished:'' })
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
@@ -292,19 +372,12 @@ function AddBookModal({ onClose, onAdded, nextId, existingBooks }) {
     if (!form.title||!form.author||!form.genre||!form.total_pages){ setError('Please fill in Title, Author, Genre and Total Pages.'); return }
     setLoading(true)
     try {
-      // Always fetch fresh list from server to prevent stale-prop duplicates
       let freshBooks = existingBooks
       try { const res = await axios.get(`${API}/view_books`); freshBooks = res.data } catch {}
       const norm = s => (s||'').trim().toLowerCase()
-      const duplicate = freshBooks.find(b =>
-        norm(b.title) === norm(form.title) && norm(b.author) === norm(form.author)
-      )
-      if (duplicate) {
-        setError(`"${duplicate.title}" by ${duplicate.author} is already in your vault!`)
-        setLoading(false)
-        return
-      }
-      await axios.post(`${API}/create`, { id:nextId, title:form.title.trim(), author:form.author.trim(), genre:form.genre.trim(), status:form.status, mood:form.mood||null, pages_read:parseInt(form.pages_read)||0, total_pages:parseInt(form.total_pages), rating:form.rating?parseInt(form.rating):null, date_started:form.date_started||null, date_finished:form.date_finished||null })
+      const duplicate = freshBooks.find(b => norm(b.title) === norm(form.title) && norm(b.author) === norm(form.author))
+      if (duplicate) { setError(`"${duplicate.title}" by ${duplicate.author} is already in your vault!`); setLoading(false); return }
+      await axios.post(`${API}/create`, { title:form.title.trim(), author:form.author.trim(), genre:form.genre.trim(), status:form.status, mood:form.mood||null, pages_read:parseInt(form.pages_read)||0, total_pages:parseInt(form.total_pages), rating:form.rating?parseInt(form.rating):null, date_started:form.date_started||null, date_finished:form.date_finished||null })
       onAdded(); onClose()
     } catch(e){ setError(e.response?.data?.detail||'Something went wrong.') }
     setLoading(false)
@@ -421,11 +494,9 @@ function EditBookModal({ book, onClose, onSaved }) {
   )
 }
 
-// ── FIX 1: Heatmap — uniform grey cells + immediate local state update ────────
 function Heatmap() {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-
   const getMonthLabels = cols => {
     const labels = []; let last = -1
     cols.forEach((week, i) => {
@@ -434,17 +505,12 @@ function Heatmap() {
     })
     return labels
   }
-
-  // FIX: use useState initialised from buildGrid() and rebuild after each log
-  const [cols, setCols]         = useState(() => buildGrid())
-  const [pages, setPages]       = useState('')
+  const [cols, setCols]           = useState(() => buildGrid())
+  const [pages, setPages]         = useState('')
   const [showInput, setShowInput] = useState(false)
-
-  // FIX: recalculate totals directly from cols state so UI is always in sync
   const flat          = useMemo(() => cols.flat(), [cols])
   const totalSessions = useMemo(() => flat.filter(c => !c.inactive && c.value > 0).reduce((s,c) => s + c.value, 0), [flat])
   const totalPages    = useMemo(() => flat.filter(c => !c.inactive).reduce((s,c) => s + c.pages, 0), [flat])
-
   const logToday = useCallback(() => {
     const key  = localDateKey(new Date())
     let saved = {}
@@ -453,35 +519,24 @@ function Heatmap() {
     const parsedPages = parseInt(pages) || 0
     if (parsedPages > 0) saved[key + '_pages'] = (saved[key + '_pages'] || 0) + parsedPages
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
-    // Rebuild immediately so the cell colour + totals update without reload
     setCols(buildGrid())
     setPages('')
     setShowInput(false)
   }, [pages])
-
   const N           = cols.length
   const monthLabels = useMemo(() => getMonthLabels(cols), [cols])
-
   return (
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'12px 18px 10px' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
-          <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.75)', textTransform:'uppercase', letterSpacing:'0.1em' }}>
-            📅 Reading Activity — {new Date().getFullYear()}
-          </h3>
-          {/* FIX: totals now derive from cols state, so they update immediately */}
-          <span style={{ fontSize:'0.7rem', color:'rgba(245,244,240,0.5)' }}>
-            {totalSessions} session{totalSessions !== 1 ? 's' : ''}{totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''}
-          </span>
+          <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.75)', textTransform:'uppercase', letterSpacing:'0.1em' }}>📅 Reading Activity — {new Date().getFullYear()}</h3>
+          <span style={{ fontSize:'0.7rem', color:'rgba(245,244,240,0.5)' }}>{totalSessions} session{totalSessions !== 1 ? 's' : ''}{totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''}</span>
         </div>
-        <button onClick={() => setShowInput(s => !s)} style={{ fontSize:'0.68rem', padding:'4px 10px', borderRadius:'7px', background:'rgba(167,139,250,0.12)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', cursor:'pointer' }}>
-          + Log
-        </button>
+        <button onClick={() => setShowInput(s => !s)} style={{ fontSize:'0.68rem', padding:'4px 10px', borderRadius:'7px', background:'rgba(167,139,250,0.12)', border:'1px solid rgba(167,139,250,0.25)', color:'#a78bfa', cursor:'pointer' }}>+ Log</button>
       </div>
       {showInput && (
         <div style={{ display:'flex', gap:'8px', marginBottom:'8px', alignItems:'center' }}>
-          <input type="number" min="0" placeholder="Pages read today (DD/MM/YYYY shown on hover)" value={pages}
-            onChange={e => setPages(e.target.value)} onKeyDown={e => e.key === 'Enter' && logToday()}
+          <input type="number" min="0" placeholder="Pages read today" value={pages} onChange={e => setPages(e.target.value)} onKeyDown={e => e.key === 'Enter' && logToday()}
             style={{ flex:1, padding:'6px 10px', borderRadius:'7px', fontSize:'0.75rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f0ff', outline:'none' }} />
           <button onClick={logToday} style={{ padding:'6px 12px', borderRadius:'7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'0.75rem' }}>Log</button>
         </div>
@@ -489,29 +544,17 @@ function Heatmap() {
       <div style={{ width:'100%' }}>
         <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px', marginBottom:'2px' }}>
           <div />
-          {cols.map((_, i) => {
-            const l = monthLabels.find(m => m.i === i)
-            return <div key={i} style={{ fontSize:'0.65rem', color:'rgb(251,250,249)', overflow:'hidden', whiteSpace:'nowrap' }}>{l ? l.label : ''}</div>
-          })}
+          {cols.map((_, i) => { const l = monthLabels.find(m => m.i === i); return <div key={i} style={{ fontSize:'0.65rem', color:'rgb(251,250,249)', overflow:'hidden', whiteSpace:'nowrap' }}>{l ? l.label : ''}</div> })}
         </div>
         <div style={{ display:'grid', gridTemplateColumns:`22px repeat(${N}, 1fr)`, gap:'2px' }}>
           <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-            {DAYS.map((d,i) => (
-              <div key={d} style={{ height:'10px', display:'flex', alignItems:'center', fontSize:'0.55rem', color:'rgb(251,250,249)' }}>
-                {i % 2 === 1 ? d : ''}
-              </div>
-            ))}
+            {DAYS.map((d,i) => <div key={d} style={{ height:'10px', display:'flex', alignItems:'center', fontSize:'0.55rem', color:'rgb(251,250,249)' }}>{i % 2 === 1 ? d : ''}</div>)}
           </div>
           {cols.map((week, wi) => (
             <div key={wi} style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
               {week.map((c, di) => (
                 <div key={di}
-                  title={(() => {
-                    if (c.inactive) return ''
-                    const [y,m,d] = c.key.split('-')
-                    const friendly = `${d}/${m}/${y}`
-                    return `${friendly}${c.value > 0 ? `: ${c.value} session${c.value > 1 ? 's' : ''}` : ''}${c.pages > 0 ? ` · ${c.pages} pages` : ''}`
-                  })()}
+                  title={(() => { if (c.inactive) return ''; const [y,m,d] = c.key.split('-'); return `${d}/${m}/${y}${c.value > 0 ? `: ${c.value} session${c.value > 1 ? 's' : ''}` : ''}${c.pages > 0 ? ` · ${c.pages} pages` : ''}` })()}
                   style={{ height:'9px', borderRadius:'1.5px', background:colorFor(c.value), transition:'transform 0.1s', minWidth:0 }}
                   onMouseEnter={e => { if (!c.inactive) e.currentTarget.style.transform = 'scale(1.6)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }} />
@@ -522,7 +565,6 @@ function Heatmap() {
       </div>
       <div style={{ display:'flex', gap:'5px', alignItems:'center', marginTop:'6px', justifyContent:'flex-end' }}>
         <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>Less</span>
-        {/* FIX: legend now shows v=0 (grey) then the green ramp */}
         {[0,1,2,3,4].map(v => <div key={v} style={{ width:'8px', height:'8px', borderRadius:'1.5px', background:colorFor(v) }} />)}
         <span style={{ fontSize:'0.55rem', color:'rgba(245,244,240,0.45)' }}>More</span>
       </div>
@@ -530,112 +572,58 @@ function Heatmap() {
   )
 }
 
-// ── TBR Jar — unchanged except localStorage (no issues reported) ──────────────
-function TBRJar({ collapsed, onToggle }) {
-  const [list, setList]       = useState(() => { try { return JSON.parse(localStorage.getItem('vault_wtr') || '[]') } catch { return [] } })
-  const [input, setInput]     = useState('')
-  const [picked, setPicked]   = useState(null)
+function TBRJar() {
+  const [list, setList]     = useState(() => { try { return JSON.parse(localStorage.getItem('vault_wtr') || '[]') } catch { return [] } })
+  const [input, setInput]   = useState('')
+  const [picked, setPicked] = useState(null)
   const [shaking, setShaking] = useState(false)
   const [focused, setFocused] = useState(false)
-
+  const [expanded, setExpanded] = useState(false)
   const save = next => { setList(next); localStorage.setItem('vault_wtr', JSON.stringify(next)) }
-
-  const add = () => {
-    if (!input.trim()) return
-    save([...list, { id: Date.now(), title: input.trim() }])
-    setInput('')
-  }
-
-  const remove = id => {
-    save(list.filter(b => b.id !== id))
-    if (picked?.id === id) setPicked(null)
-  }
-
+  const add = () => { if (!input.trim()) return; save([...list, { id: Date.now(), title: input.trim() }]); setInput('') }
+  const remove = id => { save(list.filter(b => b.id !== id)); if (picked?.id === id) setPicked(null) }
   const pickRandom = () => {
     if (!list.length) return
     setShaking(true)
     setTimeout(() => { setPicked(list[Math.floor(Math.random() * list.length)]); setShaking(false) }, 700)
   }
-
-  const slips = useMemo(() => Array.from({ length: Math.min(list.length, 12) }, (_, i) => ({
-    w: 22 + (i * 9) % 28, hue: (i * 51) % 360,
-    left: 6 + (i * 19) % 46, bot: 3 + (i * 7) % 50,
-    rot: -18 + (i * 11) % 36,
-  })), [list.length])
-
+  const slips = useMemo(() => Array.from({ length: Math.min(list.length, 12) }, (_, i) => ({ w: 22 + (i * 9) % 28, hue: (i * 51) % 360, left: 6 + (i * 19) % 46, bot: 3 + (i * 7) % 50, rot: -18 + (i * 11) % 36 })), [list.length])
   const ROMAN = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
-
-  // FIX 2: TBR uses the same collapsible panel pattern as library
   const PREVIEW_COUNT = 5
-  const [expanded, setExpanded] = useState(false)
   const visibleList = expanded ? list : list.slice(0, PREVIEW_COUNT)
-
   return (
     <div style={{ background:'linear-gradient(155deg, rgba(16,6,34,0.98), rgba(8,4,20,0.99))', border:'1px solid rgba(167,139,250,0.18)', borderRadius:'24px', padding:'28px', boxShadow:'0 16px 56px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'22px' }}>
         <div>
           <h3 style={{ fontSize:'0.8rem', color:'rgb(247,246,250)', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:'5px' }}>🫙 TBR Jar</h3>
-          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', color:'#c4b5fd', lineHeight:1.4 }}>
-            {list.length === 0 ? 'The jar awaits its stories…' : `${list.length} tale${list.length === 1 ? '' : 's'} waiting to be told...`}
-          </p>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', color:'#c4b5fd', lineHeight:1.4 }}>{list.length === 0 ? 'The jar awaits its stories…' : `${list.length} tale${list.length === 1 ? '' : 's'} waiting to be told...`}</p>
         </div>
         {list.length > 0 && (
-          <button onClick={pickRandom}
-            style={{ padding:'8px 16px', borderRadius:'12px', cursor:'pointer', background:'linear-gradient(135deg,rgba(124,58,237,0.2),rgba(236,72,153,0.15))', border:'1px solid rgba(167,139,250,0.3)', color:'#c4b5fd', fontSize:'0.76rem', fontWeight:'600', letterSpacing:'0.05em', transition:'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow='0 0 22px rgba(124,58,237,0.35)'; e.currentTarget.style.borderColor='rgba(196,181,253,0.45)' }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor='rgba(167,139,250,0.3)' }}>
-            🎲 Fate decides
-          </button>
+          <button onClick={pickRandom} style={{ padding:'8px 16px', borderRadius:'12px', cursor:'pointer', background:'linear-gradient(135deg,rgba(124,58,237,0.2),rgba(236,72,153,0.15))', border:'1px solid rgba(167,139,250,0.3)', color:'#c4b5fd', fontSize:'0.76rem', fontWeight:'600', letterSpacing:'0.05em' }}>🎲 Fate decides</button>
         )}
       </div>
-
       <div style={{ display:'flex', justifyContent:'center', marginBottom:'24px' }}>
         <div style={{ position:'relative', width:'150px', height:'140px', flexShrink:0, animation: shaking ? 'jarShake 0.7s ease' : 'none' }}>
-          <div style={{ position:'absolute', inset:'-24px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.1),transparent 70%)', pointerEvents:'none' }} />
           <div style={{ position:'absolute', bottom:0, left:'18px', right:'18px', height:'108px', background:'linear-gradient(155deg,rgba(167,139,250,0.07),rgba(124,58,237,0.03))', border:'1.5px solid rgba(167,139,250,0.22)', borderRadius:'10px 10px 20px 20px', overflow:'hidden', backdropFilter:'blur(10px)', boxShadow:'inset 0 0 40px rgba(124,58,237,0.05), 0 12px 40px rgba(0,0,0,0.45)' }}>
-            <div style={{ position:'absolute', top:0, left:'9px', width:'9px', bottom:0, background:'linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02))', borderRadius:'2px', pointerEvents:'none' }} />
-            <div style={{ position:'absolute', top:0, right:0, width:'14px', bottom:0, background:'linear-gradient(270deg,rgba(0,0,0,0.18),transparent)', pointerEvents:'none' }} />
-            {slips.map((s,i) => (
-              <div key={i} style={{ position:'absolute', width:`${s.w}px`, height:'9px', background:`linear-gradient(90deg,hsl(${s.hue},65%,65%),hsl(${s.hue+28},55%,75%))`, borderRadius:'2px', opacity:0.72, left:`${s.left}%`, bottom:`${s.bot}%`, transform:`rotate(${s.rot}deg)`, boxShadow:'0 2px 6px rgba(0,0,0,0.35)' }} />
-            ))}
-            {list.length === 0 && (
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'6px' }}>
-                <span style={{ fontSize:'1.8rem', opacity:0.18 }}>🪄</span>
-                <span style={{ fontSize:'0.6rem', color:'rgba(167,139,250,0.3)', fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif" }}>empty</span>
-              </div>
-            )}
+            {slips.map((s,i) => <div key={i} style={{ position:'absolute', width:`${s.w}px`, height:'9px', background:`linear-gradient(90deg,hsl(${s.hue},65%,65%),hsl(${s.hue+28},55%,75%))`, borderRadius:'2px', opacity:0.72, left:`${s.left}%`, bottom:`${s.bot}%`, transform:`rotate(${s.rot}deg)` }} />)}
+            {list.length === 0 && <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'6px' }}><span style={{ fontSize:'1.8rem', opacity:0.18 }}>🪄</span><span style={{ fontSize:'0.6rem', color:'rgba(167,139,250,0.3)', fontStyle:'italic' }}>empty</span></div>}
           </div>
-          <div style={{ position:'absolute', top:'6px', left:'12px', right:'12px', height:'32px', background:'linear-gradient(180deg,rgba(167,139,250,0.22),rgba(124,58,237,0.1))', border:'1.5px solid rgba(167,139,250,0.32)', borderRadius:'12px 12px 6px 6px', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
-            <div style={{ position:'absolute', top:'6px', left:'7px', right:'7px', height:'2px', background:'rgba(167,139,250,0.22)', borderRadius:'1px' }} />
-            <div style={{ position:'absolute', top:'11px', left:'12px', right:'12px', height:'1px', background:'rgba(167,139,250,0.1)', borderRadius:'1px' }} />
-          </div>
-          {list.length > 0 && (
-            <div style={{ position:'absolute', top:'-10px', right:'-8px', minWidth:'27px', height:'27px', borderRadius:'99px', padding:'0 7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', color:'white', fontWeight:'700', boxShadow:'0 0 16px rgba(124,58,237,0.7)' }}>{list.length}</div>
-          )}
+          <div style={{ position:'absolute', top:'6px', left:'12px', right:'12px', height:'32px', background:'linear-gradient(180deg,rgba(167,139,250,0.22),rgba(124,58,237,0.1))', border:'1.5px solid rgba(167,139,250,0.32)', borderRadius:'12px 12px 6px 6px' }} />
+          {list.length > 0 && <div style={{ position:'absolute', top:'-10px', right:'-8px', minWidth:'27px', height:'27px', borderRadius:'99px', padding:'0 7px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', color:'white', fontWeight:'700', boxShadow:'0 0 16px rgba(124,58,237,0.7)' }}>{list.length}</div>}
         </div>
       </div>
-
       {picked && (
-        <div style={{ marginBottom:'20px', padding:'16px 20px', background:'linear-gradient(135deg,rgba(249,168,212,0.07),rgba(124,58,237,0.07))', border:'1px solid rgba(249,168,212,0.2)', borderRadius:'16px', animation:'fadein 0.4s ease', position:'relative', overflow:'hidden' }}>
-          <div style={{ position:'absolute', top:'-30px', right:'-30px', width:'90px', height:'90px', borderRadius:'50%', background:'rgba(249,168,212,0.07)', filter:'blur(20px)', pointerEvents:'none' }} />
+        <div style={{ marginBottom:'20px', padding:'16px 20px', background:'linear-gradient(135deg,rgba(249,168,212,0.07),rgba(124,58,237,0.07))', border:'1px solid rgba(249,168,212,0.2)', borderRadius:'16px', animation:'fadein 0.4s ease' }}>
           <div style={{ fontSize:'0.58rem', color:'#f9a8d4', textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:'6px', opacity:0.8 }}>✨ Read this next</div>
-          <div style={{ fontSize:'1.15rem', fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic', fontWeight:'600', lineHeight:1.3, background:'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'tbrShimmer 2.5s linear infinite' }}>{picked.title}</div>
+          <div style={{ fontSize:'1.15rem', fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic', fontWeight:'600', color:'#f9a8d4' }}>{picked.title}</div>
         </div>
       )}
-
       <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,rgba(167,139,250,0.18),transparent)', marginBottom:'20px' }} />
-
       <div style={{ display:'flex', gap:'10px', marginBottom:'20px' }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          placeholder="Add a title to the jar…"
-          style={{ flex:1, padding:'11px 16px', borderRadius:'14px', fontSize:'0.9rem', background:'rgba(255,255,255,0.04)', border:`1px solid ${focused ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.07)'}`, color:'#f1f0ff', outline:'none', boxShadow:focused?'0 0 0 3px rgba(124,58,237,0.1)':'none', transition:'all 0.2s', boxSizing:'border-box' }} />
-        <button onClick={add}
-          style={{ padding:'11px 20px', borderRadius:'14px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'1.05rem', fontWeight:'700', boxShadow:'0 0 18px rgba(124,58,237,0.4)', transition:'all 0.2s' }}
-          onMouseEnter={e => { e.currentTarget.style.transform='scale(1.07)'; e.currentTarget.style.boxShadow='0 0 28px rgba(124,58,237,0.65)' }}
-          onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 0 18px rgba(124,58,237,0.4)' }}>+</button>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder="Add a title to the jar…"
+          style={{ flex:1, padding:'11px 16px', borderRadius:'14px', fontSize:'0.9rem', background:'rgba(255,255,255,0.04)', border:`1px solid ${focused ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.07)'}`, color:'#f1f0ff', outline:'none', boxSizing:'border-box' }} />
+        <button onClick={add} style={{ padding:'11px 20px', borderRadius:'14px', background:'linear-gradient(135deg,#7c3aed,#a855f7)', border:'none', color:'white', cursor:'pointer', fontSize:'1.05rem', fontWeight:'700' }}>+</button>
       </div>
-
       {list.length === 0 ? (
         <p style={{ fontSize:'0.95rem', color:'rgba(244,244,243,0.94)', textAlign:'center', padding:'14px 0' }}>Drop some books in the jar…</p>
       ) : (
@@ -644,56 +632,22 @@ function TBRJar({ collapsed, onToggle }) {
             {visibleList.map((b, idx) => {
               const isPicked = picked?.id === b.id
               return (
-                <div key={b.id}
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'11px 14px', borderRadius:'13px', background:isPicked?'rgba(249,168,212,0.06)':'rgba(255,255,255,0.025)', border:`1px solid ${isPicked?'rgba(249,168,212,0.2)':'rgba(255,255,255,0.05)'}`, transition:'all 0.22s', cursor:'default' }}
-                  onMouseEnter={e => { if (!isPicked) { e.currentTarget.style.background='rgba(167,139,250,0.055)'; e.currentTarget.style.borderColor='rgba(167,139,250,0.14)' }}}
-                  onMouseLeave={e => { if (!isPicked) { e.currentTarget.style.background='rgba(255,255,255,0.025)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.05)' }}}>
-                  <span style={{ fontSize:'0.65rem', color:isPicked?'rgba(249,168,212,0.6)':'rgba(167,139,250,0.4)', letterSpacing:'0.06em', flexShrink:0, minWidth:'18px', textAlign:'right', lineHeight:1 }}>{ROMAN[idx] || idx+1}.</span>
-                  <span style={{
-                    fontSize:'0.9rem', fontWeight:isPicked?'600':'400',
-                    flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                    letterSpacing:'0.015em', lineHeight:1.35,
-                    background: isPicked
-                      ? 'linear-gradient(90deg,#f9a8d4,#c4b5fd,#f9a8d4)'
-                      : 'linear-gradient(90deg,rgba(245,244,240,0.85) 0%,rgba(196,181,253,0.8) 60%,rgba(245,244,240,0.85) 100%)',
-                    backgroundSize:'200% auto',
-                    WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-                    animation: isPicked ? 'tbrShimmer 2.2s linear infinite' : 'none',
-                  }}>{b.title}</span>
-                  <button onClick={() => remove(b.id)}
-                    style={{ background:'none', border:'none', color:'rgba(245,244,240,0.18)', cursor:'pointer', fontSize:'0.7rem', padding:'0 2px', transition:'color 0.2s', flexShrink:0, lineHeight:1 }}
-                    onMouseEnter={e => e.currentTarget.style.color='#f87171'}
-                    onMouseLeave={e => e.currentTarget.style.color='rgba(245,244,240,0.18)'}>✕</button>
+                <div key={b.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'11px 14px', borderRadius:'13px', background:isPicked?'rgba(249,168,212,0.06)':'rgba(255,255,255,0.025)', border:`1px solid ${isPicked?'rgba(249,168,212,0.2)':'rgba(255,255,255,0.05)'}` }}>
+                  <span style={{ fontSize:'0.65rem', color:'rgba(167,139,250,0.4)', flexShrink:0, minWidth:'18px', textAlign:'right' }}>{ROMAN[idx] || idx+1}.</span>
+                  <span style={{ fontSize:'0.9rem', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:isPicked?'#f9a8d4':'rgba(245,244,240,0.85)' }}>{b.title}</span>
+                  <button onClick={() => remove(b.id)} style={{ background:'none', border:'none', color:'rgba(245,244,240,0.18)', cursor:'pointer', fontSize:'0.7rem' }} onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='rgba(245,244,240,0.18)'}>✕</button>
                 </div>
               )
             })}
           </div>
-          {/* FIX 2: collapsible toggle for TBR list */}
           {list.length > PREVIEW_COUNT && (
-            <button onClick={() => setExpanded(o => !o)}
-              style={{ marginTop:'10px', width:'100%', padding:'9px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
-              onMouseEnter={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.13)'; e.currentTarget.style.color='#a78bfa' }}
-              onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(196,181,253,0.7)' }}>
+            <button onClick={() => setExpanded(o => !o)} style={{ marginTop:'10px', width:'100%', padding:'9px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem' }}>
               {expanded ? `↑ Show less` : `↓ Show all ${list.length} titles`}
             </button>
           )}
         </>
       )}
-
-      <style>{`
-        @keyframes jarShake {
-          0%,100%{ transform:rotate(0deg) translateY(0) }
-          15%{ transform:rotate(-9deg) translateY(-4px) }
-          30%{ transform:rotate(9deg) translateY(-6px) }
-          50%{ transform:rotate(-6deg) translateY(-3px) }
-          70%{ transform:rotate(6deg) translateY(-4px) }
-          88%{ transform:rotate(-3deg) translateY(-1px) }
-        }
-        @keyframes tbrShimmer {
-          0%  { background-position:200% center }
-          100%{ background-position:-200% center }
-        }
-      `}</style>
+      <style>{`@keyframes jarShake { 0%,100%{transform:rotate(0deg)} 15%{transform:rotate(-9deg) translateY(-4px)} 30%{transform:rotate(9deg) translateY(-6px)} 50%{transform:rotate(-6deg) translateY(-3px)} 70%{transform:rotate(6deg) translateY(-4px)} }`}</style>
     </div>
   )
 }
@@ -709,33 +663,17 @@ function ReadingGoals({ completedCount = 0 }) {
   const months  = ["January","February","March","April","May","June","July","August","September","October","November","December"]
   const currentMonth = months[new Date().getMonth()]
   const numStyle = { fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:'1.4rem', color:'#a78bfa', fontWeight:600, lineHeight:1 }
-  const handleInputChange = (setter, key, val) => {
-    if (val === "") { setter("") } else {
-      const n = parseInt(val, 10)
-      setter(n)
-      localStorage.setItem(key, String(n))
-    }
-  }
-  const handleBlur = (setter, key, currentVal, flagSetter) => {
-    const val = (!currentVal || currentVal < 1) ? 1 : currentVal
-    setter(val)
-    localStorage.setItem(key, String(val))
-    flagSetter(false)
-  }
+  const handleInputChange = (setter, key, val) => { if (val === "") { setter("") } else { const n = parseInt(val, 10); setter(n); localStorage.setItem(key, String(n)) } }
+  const handleBlur = (setter, key, currentVal, flagSetter) => { const val = (!currentVal || currentVal < 1) ? 1 : currentVal; setter(val); localStorage.setItem(key, String(val)); flagSetter(false) }
   return (
-    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'24px', padding:'24px', color:'#fff', boxShadow:'0 20px 40px rgba(0,0,0,0.4)' }}>
-      <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎯 2026 Reading Goal</h3>
+    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'24px', padding:'24px', color:'#fff' }}>
+      <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎯 {new Date().getFullYear()} Reading Goal</h3>
       <div style={{ background:'radial-gradient(circle at top left, rgba(124,58,237,0.15), transparent)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'20px', padding:'30px 20px', marginBottom:'20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'20px' }}>
         <div style={{ position:'relative' }}>
           <svg width="140" height="140" viewBox="0 0 140 140">
-            <defs>
-              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7c3aed"/><stop offset="100%" stopColor="#ec4899"/>
-              </linearGradient>
-              <filter id="ringGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            </defs>
+            <defs><linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#7c3aed"/><stop offset="100%" stopColor="#ec4899"/></linearGradient></defs>
             <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12"/>
-            <circle cx="70" cy="70" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="12" strokeDasharray={`${stroke} ${circ}`} strokeLinecap="round" transform="rotate(-90 70 70)" filter="url(#ringGlow)" style={{ transition:'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}/>
+            <circle cx="70" cy="70" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="12" strokeDasharray={`${stroke} ${circ}`} strokeLinecap="round" transform="rotate(-90 70 70)" style={{ transition:'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}/>
           </svg>
           <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
             <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.8rem', color:'#fff', fontWeight:600 }}>{Math.round(yearPct)}%</span>
@@ -745,9 +683,9 @@ function ReadingGoals({ completedCount = 0 }) {
           <span style={{ ...numStyle, fontSize:'2.2rem', color:'#fff' }}>{completedCount}</span>
           <span style={{ fontSize:'1.5rem', color:'rgba(255,255,255,0.1)' }}>/</span>
           {editingYear ? (
-            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal,'vault_yearGoal',e.target.value)} onBlur={()=>handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
+            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal,'vault_yearGoal',e.target.value)} onBlur={()=>handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
           ) : (
-            <span onClick={()=>setEditingYear(true)} style={{ ...numStyle, fontSize:'2.2rem', cursor:'pointer', color:'#a78bfa' }}>{yearGoal}</span>
+            <span onClick={()=>setEditingYear(true)} style={{ ...numStyle, fontSize:'2.2rem', cursor:'pointer' }}>{yearGoal}</span>
           )}
           <span style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', marginLeft:'4px' }}>books</span>
         </div>
@@ -759,22 +697,19 @@ function ReadingGoals({ completedCount = 0 }) {
             <span style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem' }}>{completedCount}</span>
             <span style={{ color:'rgba(255,255,255,0.1)' }}>/</span>
             {editingMonth ? (
-              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal,'vault_monthGoal',e.target.value)} onBlur={()=>handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} onKeyDown={e=>e.key==='Enter'&&handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
+              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal,'vault_monthGoal',e.target.value)} onBlur={()=>handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
             ) : (
               <span onClick={()=>setEditingMonth(true)} style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem', cursor:'pointer' }}>{monthGoal}</span>
             )}
           </div>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(32px, 1fr))', gap:'8px', maxHeight:'200px', overflowY:'auto', paddingRight:'4px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(32px, 1fr))', gap:'8px', maxHeight:'200px', overflowY:'auto' }}>
           {Array.from({ length:Math.max(monthGoal||0,0) },(_,i)=>{
             const done = i < completedCount
             return (
-              <div key={i} style={{ height:'32px', width:'32px', borderRadius:'8px', background:done?'rgba(239,68,68,0.1)':'rgba(255,255,255,0.03)', border:done?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.3s ease' }}>
-                {done ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" style={{ filter:'drop-shadow(0 0 4px #ef4444)' }}><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="#ef4444"/></svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ opacity:0.2 }}><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="white"/></svg>
-                )}
+              <div key={i} style={{ height:'32px', width:'32px', borderRadius:'8px', background:done?'rgba(239,68,68,0.1)':'rgba(255,255,255,0.03)', border:done?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {done ? <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="#ef4444"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ opacity:0.2 }}><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 4.144 3.572 2 6.5 2c1.742 0 3.093.87 4.5 2.312C12.41 2.87 13.757 2 15.5 2 18.429 2 21 4.144 21 7.191c0 4.105-5.37 8.863-9 13.18-.74.87-1.255 1.222-1.255 1.222z" fill="white"/></svg>}
               </div>
             )
           })}
@@ -799,11 +734,9 @@ function Challenges() {
         <div key={ch.id} style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px', padding:'10px', background:ch.completed?`${ch.color}10`:'rgba(255,255,255,0.02)', borderRadius:'10px', border:`1px solid ${ch.completed?ch.color+'40':'rgba(255,255,255,0.05)'}` }}>
           <span style={{ fontSize:'18px', flexShrink:0 }}>{ch.icon}</span>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:'0.78rem', color:ch.completed?'#f1f0ff':'#d1d5db', marginBottom:'4px' }}>
-              {ch.title}{ch.completed&&<span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}
-            </div>
+            <div style={{ fontSize:'0.78rem', color:ch.completed?'#f1f0ff':'#d1d5db', marginBottom:'4px' }}>{ch.title}{ch.completed&&<span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}</div>
             <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'2px' }}>
-              <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:ch.completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, boxShadow:ch.completed?`0 0 6px ${ch.color}`:'none', transition:'width 1s ease' }} />
+              <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:ch.completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, transition:'width 1s ease' }} />
             </div>
           </div>
           <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{ch.done}/{ch.total}</span>
@@ -813,25 +746,18 @@ function Challenges() {
   )
 }
 
-// Show ALL mood options always; filtering still works correctly via displayed memo
 function MoodFilterPanel({ selectedMood, onChange, books }) {
   const moods = [{ value:'all', label:'✨ All Moods' }, ...MOOD_OPTIONS]
-
   return (
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
       <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🎭 Filter by Mood</h3>
       <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
         {moods.map(m => {
-          const count = m.value === 'all'
-            ? books.length
-            : books.filter(b => b.mood === m.value).length
+          const count = m.value === 'all' ? books.length : books.filter(b => b.mood === m.value).length
           return (
             <button key={m.value} onClick={() => onChange(m.value)}
-              style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s', position:'relative' }}>
-              {m.label}
-              {count > 0 && m.value !== 'all' && (
-                <span style={{ marginLeft:'5px', fontSize:'0.62rem', opacity:0.6 }}>({count})</span>
-              )}
+              style={{ padding:'8px 16px', borderRadius:'20px', fontSize:'0.78rem', cursor:'pointer', background:selectedMood===m.value?'rgba(167,139,250,0.2)':'transparent', border:`1px solid ${selectedMood===m.value?'#a78bfa':'rgba(255,255,255,0.1)'}`, color:selectedMood===m.value?'#a78bfa':'rgba(245,244,240,0.91)', transition:'all 0.2s' }}>
+              {m.label}{count > 0 && m.value !== 'all' && <span style={{ marginLeft:'5px', fontSize:'0.62rem', opacity:0.6 }}>({count})</span>}
             </button>
           )
         })}
@@ -840,7 +766,10 @@ function MoodFilterPanel({ selectedMood, onChange, books }) {
   )
 }
 
+// ── Main App ───────────────────────────────────────────────────
 export default function App() {
+  const [authed, setAuthed] = useState(() => !!getToken())
+
   const [books, setBooks]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [sortBy, setSortBy]             = useState(() => localStorage.getItem('vault_sortBy') || '')
@@ -858,12 +787,18 @@ export default function App() {
   const setFilterP    = v => { setFilter(v);       localStorage.setItem('vault_filter', v) }
   const setMoodP      = v => { setSelectedMood(v); localStorage.setItem('vault_mood', v) }
 
+  const handleLogout = () => { removeToken(); setAuthed(false); setBooks([]) }
+
   const fetchBooks = async () => {
     try { const res = await axios.get(`${API}/view_books`); setBooks(res.data) }
-    catch(e){ console.error('Is FastAPI running?', e) }
+    catch(e) {
+      if (e.response?.status === 401) { handleLogout() }
+      else { console.error('Is FastAPI running?', e) }
+    }
     setLoading(false)
   }
-  useEffect(()=>{ fetchBooks() },[])
+
+  useEffect(() => { if (authed) fetchBooks() }, [authed])
 
   const deleteBook = async id => {
     if(!confirm('Remove this book from your vault?')) return
@@ -872,8 +807,6 @@ export default function App() {
     fetchBooks()
   }
 
-  // When a specific mood is active, ignore status filter — show ALL books with that mood
-  // Also deduplicate by title+author in case DB already has duplicates
   const displayed = useMemo(() => {
     const normalize = s => (s || '').toString().trim().toLowerCase()
     const seen = new Set()
@@ -901,8 +834,10 @@ export default function App() {
     { label:'Reading',     value:stats.reading,   icon:'📖', key:'reading'   },
   ]
 
-  // Reset libOpen when filter/mood changes so the view collapses back to 3 rows
   useEffect(() => { setLibOpen(false) }, [filter, selectedMood])
+
+  // Show auth page if not logged in
+  if (!authed) return <AuthPage onLogin={() => setAuthed(true)} />
 
   return (
     <>
@@ -915,10 +850,8 @@ export default function App() {
         @keyframes float{0%,100%{transform:translateY(0);opacity:0.4;}50%{transform:translateY(-20px);opacity:0.9;}}
         @keyframes shimmer{0%{background-position:-200% center;}100%{background-position:200% center;}}
         @keyframes fadein{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-        @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
         select option{background:#1a1030;color:#f1f0ff;}
         .animate-fade-in{animation:fadein 0.5s ease-out forwards;opacity:0;}
-        .slide-down{animation:slideDown 0.25s ease forwards;}
       `}</style>
       <div style={{ minHeight:'100vh', background:'#0d0a1a', fontFamily:"'DM Sans',sans-serif", position:'relative' }}>
         <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0 }}>
@@ -929,11 +862,16 @@ export default function App() {
         </div>
 
         <div style={{ position:'relative', zIndex:1, maxWidth:'1500px', margin:'0 auto', padding:'48px 24px' }}>
-
           <header style={{ textAlign:'center', marginBottom:'40px', animation:'fadein 0.8s ease' }}>
             <p style={{ fontSize:'0.8rem', letterSpacing:'0.25em', textTransform:'uppercase', color:'rgba(167,139,250,0.6)', marginBottom:'12px' }}>✦ Your Literary Sanctuary ✦</p>
             <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(3rem,6vw,4.5rem)', fontWeight:'700', lineHeight:1.2, marginBottom:'16px', background:'linear-gradient(135deg,#e0d7ff 0%,#a78bfa 40%,#f9a8d4 80%,#fbbf24 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', animation:'shimmer 6s linear infinite' }}>My Reading Vault</h1>
-            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'#f1f0ff' }}>Where every page tells a story…</p>
+            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontStyle:'italic', color:'#f1f0ff', marginBottom:'12px' }}>Where every page tells a story…</p>
+            <button onClick={handleLogout}
+              style={{ padding:'6px 16px', borderRadius:'9px', cursor:'pointer', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.4)', fontSize:'0.75rem', transition:'all 0.2s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='#f8717155' }}
+              onMouseLeave={e=>{ e.currentTarget.style.color='rgb(255, 253, 253)'; e.currentTarget.style.borderColor='rgba(255, 254, 254, 0.1)' }}>
+              Logout ➜]
+            </button>
           </header>
 
           {/* Stats */}
@@ -954,13 +892,11 @@ export default function App() {
           {/* Heatmap */}
           <div style={{ marginBottom:'36px' }}><Heatmap /></div>
 
-          {/* Two-column layout — stretch so both sides grow together */}
+          {/* Two-column layout */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'28px', alignItems:'stretch' }}>
 
-            {/* ── LEFT COLUMN ── */}
+            {/* LEFT COLUMN */}
             <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
-
-              {/* My Library — collapsible after first 3 books */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', overflow:'hidden' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 14px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
@@ -985,15 +921,9 @@ export default function App() {
                   {loading ? (
                     <div style={{ textAlign:'center', color:'#e0d7ff', padding:'32px' }}>✨ Opening the vault…</div>
                   ) : displayed.length === 0 ? (
-                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'28px', fontStyle:'italic' }}>
-                      {selectedMood !== 'all'
-                        ? <>No books tagged as <span style={{color:'#a78bfa'}}>{MOOD_OPTIONS.find(m=>m.value===selectedMood)?.label || selectedMood}</span>.<br/><span style={{fontSize:'0.72rem'}}>Open a book card and click Edit to assign a mood.</span></>
-                        : 'No books match your filters.'
-                      }
-                    </div>
+                    <div style={{ textAlign:'center', color:'rgba(245,244,240,0.4)', padding:'28px', fontStyle:'italic' }}>No books match your filters.</div>
                   ) : (
                     <>
-                      {/* Collapse after first 3 rows (9 cards at 3-col grid) */}
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' }}>
                         {(libOpen ? displayed : displayed.slice(0,9)).map((book,i) => (
                           <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={setEditingBook} style={{ animationDelay:`${i*0.05}s` }} />
@@ -1001,9 +931,7 @@ export default function App() {
                       </div>
                       {displayed.length > 9 && (
                         <button onClick={()=>setLibOpen(o=>!o)}
-                          style={{ marginTop:'14px', width:'100%', padding:'10px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem', letterSpacing:'0.05em', transition:'all 0.2s' }}
-                          onMouseEnter={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.13)'; e.currentTarget.style.color='#a78bfa' }}
-                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(167,139,250,0.07)'; e.currentTarget.style.color='rgba(196,181,253,0.7)' }}>
+                          style={{ marginTop:'14px', width:'100%', padding:'10px', borderRadius:'12px', cursor:'pointer', background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.18)', color:'rgba(196,181,253,0.7)', fontSize:'0.78rem', letterSpacing:'0.05em' }}>
                           {libOpen ? `↑ Show less` : `↓ Show all ${displayed.length} books`}
                         </button>
                       )}
@@ -1011,16 +939,11 @@ export default function App() {
                   )}
                 </div>
               </div>
-
-              {/* FIX 3: MoodFilterPanel now receives books prop so it shows only used moods */}
               <MoodFilterPanel selectedMood={selectedMood} onChange={setMoodP} books={books} />
-
-              {/* TBR Jar */}
               <TBRJar />
-
             </div>
 
-            {/* ── RIGHT COLUMN ── */}
+            {/* RIGHT COLUMN */}
             <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>📚 Bookshelf</h3>
@@ -1031,8 +954,6 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              {/* Genres */}
               <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
                 <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.8)', textTransform:'uppercase', marginBottom:'14px' }}>✦ Genres</h3>
                 {Object.entries(books.reduce((acc,b)=>{ acc[b.genre]=(acc[b.genre]||0)+1; return acc },{})).sort((a,b)=>b[1]-a[1]).map(([genre,count])=>(
@@ -1044,16 +965,14 @@ export default function App() {
                   </div>
                 ))}
               </div>
-
               <ReadingGoals completedCount={stats.completed} />
               <Challenges />
             </div>
-
           </div>
         </div>
       </div>
 
-      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} nextId={books.length?Math.max(...books.map(b=>b.id))+1:1} existingBooks={books} />}
+      {showAddModal && <AddBookModal onClose={()=>setShowAddModal(false)} onAdded={fetchBooks} existingBooks={books} />}
       {editingBook  && <EditBookModal book={editingBook} onClose={()=>setEditingBook(null)} onSaved={fetchBooks} />}
     </>
   )
