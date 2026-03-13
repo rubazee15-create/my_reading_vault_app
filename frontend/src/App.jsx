@@ -8,6 +8,15 @@ const getToken    = () => localStorage.getItem('vault_token')
 const setToken    = (t) => localStorage.setItem('vault_token', t)
 const removeToken = () => localStorage.removeItem('vault_token')
 
+function getUserEmail() {
+  const token = getToken()
+  if (!token) return 'guest'
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.sub || payload.email || 'guest'
+  } catch { return 'guest' }
+}
+
 // Attach token to every axios request automatically
 axios.interceptors.request.use(config => {
   const token = getToken()
@@ -47,7 +56,7 @@ const MOOD_OPTIONS = [
   { value: 'relatable',  label: '🤗 Relatable'   },
 ]
 
-const STORAGE_KEY = 'vault_heatmap'
+const getStorageKey = (key) => `${key}_${getUserEmail()}`
 
 // ── Heatmap helpers ────────────────────────────────────────────
 function localDateKey(dt) {
@@ -128,7 +137,7 @@ function AuthPage({ onLogin }) {
   const inp = { width:'100%', padding:'11px 14px', borderRadius:'12px', fontSize:'0.88rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'#f1f0ff', outline:'none', boxSizing:'border-box' }
 
   return (
-    <div style={{ minHeight:'100vh', width:'100%', background:'#0d0a1a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans',sans-serif", position:'relative', overflow:'hidden' }}>
+    <div style={{ position:'fixed', inset:0, background:'#0d0a1a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans',sans-serif", overflow:'hidden', zIndex:9999 }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
       {/* background glow */}
       <div style={{ position:'absolute', top:'-10%', left:'-5%', width:'500px', height:'500px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.15),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }} />
