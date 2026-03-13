@@ -732,52 +732,71 @@ function ReadingGoals({ completedCount = 0 }) {
   )
 }
 
-function Challenges() {
-  const CHALLENGES_KEY = getStorageKey('vault_challenges')
-  const DEFAULT_ITEMS = [
-    { id:1, title:'Read 5 different genres', icon:'🎭', total:5, color:'#f59e0b' },
-    { id:2, title:'Finish a book in one day', icon:'⚡', total:1, color:'#10b981' },
-    { id:3, title:'Read 3 books by same author', icon:'✍️', total:3, color:'#8b5cf6' },
-    { id:4, title:'Read a book over 500 pages', icon:'📖', total:1, color:'#ec4899' },
-    { id:5, title:'Read before bed 7 days in a row', icon:'🌙', total:7, color:'#06b6d4' },
+function Challenges({ books = [] }) {
+  // AUTO-CALCULATED from real book data
+  const completedBooks = books.filter(b => b.status === 'completed')
+
+  // 1. Distinct genres
+  const distinctGenres = new Set(completedBooks.map(b => b.genre).filter(Boolean)).size
+
+  // 2. Finished a book in one day (date_started === date_finished)
+  const finishedInOneDay = completedBooks.some(b =>
+    b.date_started && b.date_finished &&
+    b.date_started !== 'null' && b.date_finished !== 'null' &&
+    b.date_started === b.date_finished
+  )
+
+  // 3. Same author
+  const authorCounts  = completedBooks.reduce((acc, b) => { acc[b.author] = (acc[b.author] || 0) + 1; return acc }, {})
+  const maxSameAuthor = Math.max(0, ...(Object.values(authorCounts).length ? Object.values(authorCounts) : [0]))
+
+  // 4. Book over 500 pages
+  const hasLongBook = completedBooks.some(b => (b.total_pages || 0) > 500)
+
+  // 5. Consecutive reading days from heatmap
+  const getConsecutiveDays = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(getStorageKey('vault_heatmap')) || '{}')
+      let streak = 0
+      const today = new Date()
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today)
+        d.setDate(today.getDate() - i)
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+        if (saved[key] && saved[key] > 0) streak++
+        else break
+      }
+      return streak
+    } catch { return 0 }
+  }
+  const consecutiveDays = getConsecutiveDays()
+
+  const ITEMS = [
+    { id:1, title:'Read 5 different genres',         icon:'🎭', total:5, color:'#f59e0b', done: Math.min(distinctGenres, 5) },
+    { id:2, title:'Finish a book in one day',        icon:'⚡', total:1, color:'#10b981', done: finishedInOneDay ? 1 : 0 },
+    { id:3, title:'Read 3 books by same author',     icon:'✍️', total:3, color:'#8b5cf6', done: Math.min(maxSameAuthor, 3) },
+    { id:4, title:'Read a book over 500 pages',      icon:'📖', total:1, color:'#ec4899', done: hasLongBook ? 1 : 0 },
+    { id:5, title:'Read before bed 7 days in a row', icon:'🌙', total:7, color:'#06b6d4', done: Math.min(consecutiveDays, 7) },
   ]
-  const [progress, setProgress] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(CHALLENGES_KEY) || '{}') } catch { return {} }
-  })
-  const save = (next) => { setProgress(next); localStorage.setItem(CHALLENGES_KEY, JSON.stringify(next)) }
-  const increment = (id, total) => {
-    const current = progress[id] || 0
-    if (current >= total) return
-    save({ ...progress, [id]: current + 1 })
-  }
-  const decrement = (id) => {
-    const current = progress[id] || 0
-    if (current <= 0) return
-    save({ ...progress, [id]: current - 1 })
-  }
 
   return (
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
       <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>⚡ Challenges</h3>
-      {DEFAULT_ITEMS.map(ch => {
-        const done = progress[ch.id] || 0
-        const completed = done >= ch.total
+      {ITEMS.map(ch => {
+        const completed = ch.done >= ch.total
         return (
           <div key={ch.id} style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px', padding:'10px', background:completed?`${ch.color}10`:'rgba(255,255,255,0.02)', borderRadius:'10px', border:`1px solid ${completed?ch.color+'40':'rgba(255,255,255,0.05)'}` }}>
             <span style={{ fontSize:'18px', flexShrink:0 }}>{ch.icon}</span>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:'0.78rem', color:completed?'#f1f0ff':'#d1d5db', marginBottom:'4px' }}>
-                {ch.title}{completed && <span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}
+                {ch.title}
+                {completed && <span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}
               </div>
               <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'2px' }}>
-                <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((done/ch.total)*100,100)}%`, background:completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, transition:'width 0.4s ease' }} />
+                <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, transition:'width 0.4s ease' }} />
               </div>
             </div>
-            <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{done}/{ch.total}</span>
-            <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-              <button onClick={() => increment(ch.id, ch.total)} style={{ background:'rgba(255,255,255,0.06)', border:'none', borderRadius:'4px', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.6rem', padding:'2px 5px', lineHeight:1 }}>▲</button>
-              <button onClick={() => decrement(ch.id)} style={{ background:'rgba(255,255,255,0.06)', border:'none', borderRadius:'4px', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.6rem', padding:'2px 5px', lineHeight:1 }}>▼</button>
-            </div>
+            <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{ch.done}/{ch.total}</span>
           </div>
         )
       })}
@@ -1008,7 +1027,7 @@ export default function App() {
               </div>
               {/* key forces remount on user change so ReadingGoals reads the correct user's storage */}
               <ReadingGoals key={userEmail} completedCount={stats.completed} />
-              <Challenges key={userEmail} />
+              <Challenges key={userEmail} books={books} />
             </div>
           </div>
         </div>
