@@ -17,6 +17,8 @@ function getUserEmail() {
   } catch { return 'guest' }
 }
 
+const getStorageKey = (key) => `${key}_${getUserEmail()}`
+
 // Attach token to every axios request automatically
 axios.interceptors.request.use(config => {
   const token = getToken()
@@ -56,8 +58,6 @@ const MOOD_OPTIONS = [
   { value: 'relatable',  label: '🤗 Relatable'   },
 ]
 
-const getStorageKey = (key) => `${key}_${getUserEmail()}`
-
 // ── Heatmap helpers ────────────────────────────────────────────
 function localDateKey(dt) {
   const yyyy = dt.getFullYear()
@@ -67,8 +67,9 @@ function localDateKey(dt) {
 }
 
 function buildGrid() {
+  const HEATMAP_KEY = getStorageKey('vault_heatmap')
   let saved = {}
-  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch {}
+  try { saved = JSON.parse(localStorage.getItem(HEATMAP_KEY) || '{}') } catch {}
   const now  = new Date()
   const jan1 = new Date(now.getFullYear(), 0, 1)
   const start = new Date(jan1)
@@ -139,7 +140,6 @@ function AuthPage({ onLogin }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'#0d0a1a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans',sans-serif", overflow:'hidden', zIndex:9999 }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-      {/* background glow */}
       <div style={{ position:'absolute', top:'-10%', left:'-5%', width:'500px', height:'500px', borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.15),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }} />
       <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:'400px', height:'400px', borderRadius:'50%', background:'radial-gradient(circle,rgba(249,168,212,0.1),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }} />
 
@@ -521,13 +521,14 @@ function Heatmap() {
   const totalSessions = useMemo(() => flat.filter(c => !c.inactive && c.value > 0).reduce((s,c) => s + c.value, 0), [flat])
   const totalPages    = useMemo(() => flat.filter(c => !c.inactive).reduce((s,c) => s + c.pages, 0), [flat])
   const logToday = useCallback(() => {
+    const HEATMAP_KEY = getStorageKey('vault_heatmap')
     const key  = localDateKey(new Date())
     let saved = {}
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch {}
+    try { saved = JSON.parse(localStorage.getItem(HEATMAP_KEY) || '{}') } catch {}
     saved[key] = (saved[key] || 0) + 1
     const parsedPages = parseInt(pages) || 0
     if (parsedPages > 0) saved[key + '_pages'] = (saved[key + '_pages'] || 0) + parsedPages
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
+    localStorage.setItem(HEATMAP_KEY, JSON.stringify(saved))
     setCols(buildGrid())
     setPages('')
     setShowInput(false)
@@ -582,13 +583,14 @@ function Heatmap() {
 }
 
 function TBRJar() {
-  const [list, setList]     = useState(() => { try { return JSON.parse(localStorage.getItem('vault_wtr') || '[]') } catch { return [] } })
-  const [input, setInput]   = useState('')
-  const [picked, setPicked] = useState(null)
+  const WTR_KEY = getStorageKey('vault_wtr')
+  const [list, setList]       = useState(() => { try { return JSON.parse(localStorage.getItem(WTR_KEY) || '[]') } catch { return [] } })
+  const [input, setInput]     = useState('')
+  const [picked, setPicked]   = useState(null)
   const [shaking, setShaking] = useState(false)
   const [focused, setFocused] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const save = next => { setList(next); localStorage.setItem('vault_wtr', JSON.stringify(next)) }
+  const save = next => { setList(next); localStorage.setItem(WTR_KEY, JSON.stringify(next)) }
   const add = () => { if (!input.trim()) return; save([...list, { id: Date.now(), title: input.trim() }]); setInput('') }
   const remove = id => { save(list.filter(b => b.id !== id)); if (picked?.id === id) setPicked(null) }
   const pickRandom = () => {
@@ -662,8 +664,10 @@ function TBRJar() {
 }
 
 function ReadingGoals({ completedCount = 0 }) {
-  const [yearGoal, setYearGoal]   = useState(() => parseInt(localStorage.getItem('vault_yearGoal') || '24'))
-  const [monthGoal, setMonthGoal] = useState(() => parseInt(localStorage.getItem('vault_monthGoal') || '50'))
+  const YEAR_KEY  = getStorageKey('vault_yearGoal')
+  const MONTH_KEY = getStorageKey('vault_monthGoal')
+  const [yearGoal, setYearGoal]   = useState(() => parseInt(localStorage.getItem(YEAR_KEY) || '0'))
+  const [monthGoal, setMonthGoal] = useState(() => parseInt(localStorage.getItem(MONTH_KEY) || '0'))
   const [editingYear, setEditingYear]   = useState(false)
   const [editingMonth, setEditingMonth] = useState(false)
   const r = 52, circ = 2 * Math.PI * r
@@ -692,7 +696,7 @@ function ReadingGoals({ completedCount = 0 }) {
           <span style={{ ...numStyle, fontSize:'2.2rem', color:'#fff' }}>{completedCount}</span>
           <span style={{ fontSize:'1.5rem', color:'rgba(255,255,255,0.1)' }}>/</span>
           {editingYear ? (
-            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal,'vault_yearGoal',e.target.value)} onBlur={()=>handleBlur(setYearGoal,'vault_yearGoal',yearGoal,setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
+            <input autoFocus type="number" value={yearGoal} onChange={e=>handleInputChange(setYearGoal, YEAR_KEY, e.target.value)} onBlur={()=>handleBlur(setYearGoal, YEAR_KEY, yearGoal, setEditingYear)} style={{ width:'60px', background:'rgba(255,255,255,0.05)', border:'1px solid #7c3aed', borderRadius:'8px', color:'#a78bfa', fontSize:'2rem', textAlign:'center', outline:'none' }} />
           ) : (
             <span onClick={()=>setEditingYear(true)} style={{ ...numStyle, fontSize:'2.2rem', cursor:'pointer' }}>{yearGoal}</span>
           )}
@@ -706,7 +710,7 @@ function ReadingGoals({ completedCount = 0 }) {
             <span style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem' }}>{completedCount}</span>
             <span style={{ color:'rgba(255,255,255,0.1)' }}>/</span>
             {editingMonth ? (
-              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal,'vault_monthGoal',e.target.value)} onBlur={()=>handleBlur(setMonthGoal,'vault_monthGoal',monthGoal,setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
+              <input autoFocus type="number" value={monthGoal} onChange={e=>handleInputChange(setMonthGoal, MONTH_KEY, e.target.value)} onBlur={()=>handleBlur(setMonthGoal, MONTH_KEY, monthGoal, setEditingMonth)} style={{ width:'40px', background:'transparent', border:'1px solid #ef4444', borderRadius:'4px', color:'#f87171', fontSize:'1.2rem', textAlign:'center' }} />
             ) : (
               <span onClick={()=>setEditingMonth(true)} style={{ ...numStyle, color:'#f87171', fontSize:'1.2rem', cursor:'pointer' }}>{monthGoal}</span>
             )}
@@ -729,28 +733,54 @@ function ReadingGoals({ completedCount = 0 }) {
 }
 
 function Challenges() {
-  const items = [
-    { id:1, title:'Read 5 different genres', icon:'🎭', total:5, done:4, color:'#f59e0b' },
-    { id:2, title:'Finish a book in one day', icon:'⚡', total:1, done:1, color:'#10b981', completed:true },
-    { id:3, title:'Read 3 books by same author', icon:'✍️', total:3, done:2, color:'#8b5cf6' },
-    { id:4, title:'Read a book over 500 pages', icon:'📖', total:1, done:1, color:'#ec4899', completed:true },
-    { id:5, title:'Read before bed 7 days in a row', icon:'🌙', total:7, done:3, color:'#06b6d4' },
+  const CHALLENGES_KEY = getStorageKey('vault_challenges')
+  const DEFAULT_ITEMS = [
+    { id:1, title:'Read 5 different genres', icon:'🎭', total:5, color:'#f59e0b' },
+    { id:2, title:'Finish a book in one day', icon:'⚡', total:1, color:'#10b981' },
+    { id:3, title:'Read 3 books by same author', icon:'✍️', total:3, color:'#8b5cf6' },
+    { id:4, title:'Read a book over 500 pages', icon:'📖', total:1, color:'#ec4899' },
+    { id:5, title:'Read before bed 7 days in a row', icon:'🌙', total:7, color:'#06b6d4' },
   ]
+  const [progress, setProgress] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CHALLENGES_KEY) || '{}') } catch { return {} }
+  })
+  const save = (next) => { setProgress(next); localStorage.setItem(CHALLENGES_KEY, JSON.stringify(next)) }
+  const increment = (id, total) => {
+    const current = progress[id] || 0
+    if (current >= total) return
+    save({ ...progress, [id]: current + 1 })
+  }
+  const decrement = (id) => {
+    const current = progress[id] || 0
+    if (current <= 0) return
+    save({ ...progress, [id]: current - 1 })
+  }
+
   return (
     <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'18px' }}>
       <h3 style={{ fontSize:'0.8rem', color:'rgba(245,244,240,0.91)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>⚡ Challenges</h3>
-      {items.map(ch=>(
-        <div key={ch.id} style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px', padding:'10px', background:ch.completed?`${ch.color}10`:'rgba(255,255,255,0.02)', borderRadius:'10px', border:`1px solid ${ch.completed?ch.color+'40':'rgba(255,255,255,0.05)'}` }}>
-          <span style={{ fontSize:'18px', flexShrink:0 }}>{ch.icon}</span>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:'0.78rem', color:ch.completed?'#f1f0ff':'#d1d5db', marginBottom:'4px' }}>{ch.title}{ch.completed&&<span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}</div>
-            <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'2px' }}>
-              <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((ch.done/ch.total)*100,100)}%`, background:ch.completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, transition:'width 1s ease' }} />
+      {DEFAULT_ITEMS.map(ch => {
+        const done = progress[ch.id] || 0
+        const completed = done >= ch.total
+        return (
+          <div key={ch.id} style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px', padding:'10px', background:completed?`${ch.color}10`:'rgba(255,255,255,0.02)', borderRadius:'10px', border:`1px solid ${completed?ch.color+'40':'rgba(255,255,255,0.05)'}` }}>
+            <span style={{ fontSize:'18px', flexShrink:0 }}>{ch.icon}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:'0.78rem', color:completed?'#f1f0ff':'#d1d5db', marginBottom:'4px' }}>
+                {ch.title}{completed && <span style={{ marginLeft:'6px', fontSize:'0.65rem', color:ch.color }}>✓ Done!</span>}
+              </div>
+              <div style={{ height:'3px', background:'rgba(255,255,255,0.06)', borderRadius:'2px' }}>
+                <div style={{ height:'100%', borderRadius:'2px', width:`${Math.min((done/ch.total)*100,100)}%`, background:completed?`linear-gradient(90deg,${ch.color},rgba(255,255,255,0.3))`:ch.color, transition:'width 0.4s ease' }} />
+              </div>
+            </div>
+            <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{done}/{ch.total}</span>
+            <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+              <button onClick={() => increment(ch.id, ch.total)} style={{ background:'rgba(255,255,255,0.06)', border:'none', borderRadius:'4px', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.6rem', padding:'2px 5px', lineHeight:1 }}>▲</button>
+              <button onClick={() => decrement(ch.id)} style={{ background:'rgba(255,255,255,0.06)', border:'none', borderRadius:'4px', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.6rem', padding:'2px 5px', lineHeight:1 }}>▼</button>
             </div>
           </div>
-          <span style={{ fontSize:'0.68rem', color:'rgba(245,244,240,0.7)', flexShrink:0 }}>{ch.done}/{ch.total}</span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -781,20 +811,20 @@ export default function App() {
 
   const [books, setBooks]               = useState([])
   const [loading, setLoading]           = useState(true)
-  const [sortBy, setSortBy]             = useState(() => localStorage.getItem('vault_sortBy') || '')
-  const [sortOrder, setSortOrder]       = useState(() => localStorage.getItem('vault_sortOrder') || 'desc')
-  const [filter, setFilter]             = useState(() => localStorage.getItem('vault_filter') || 'all')
-  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem('vault_mood') || 'all')
+  const [sortBy, setSortBy]             = useState(() => localStorage.getItem(getStorageKey('vault_sortBy')) || '')
+  const [sortOrder, setSortOrder]       = useState(() => localStorage.getItem(getStorageKey('vault_sortOrder')) || 'desc')
+  const [filter, setFilter]             = useState(() => localStorage.getItem(getStorageKey('vault_filter')) || 'all')
+  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem(getStorageKey('vault_mood')) || 'all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingBook, setEditingBook]   = useState(null)
   const [shelfSelected, setShelfSelected] = useState(null)
   const [libOpen, setLibOpen]           = useState(false)
   const [particles] = useState(()=>Array.from({length:30},(_,i)=>({ id:i, x:Math.random()*100, y:Math.random()*100, size:Math.random()*2+1, duration:Math.random()*6+4, delay:Math.random()*5 })))
 
-  const setSortByP    = v => { setSortBy(v);       localStorage.setItem('vault_sortBy', v) }
-  const setSortOrderP = v => { setSortOrder(v);    localStorage.setItem('vault_sortOrder', v) }
-  const setFilterP    = v => { setFilter(v);       localStorage.setItem('vault_filter', v) }
-  const setMoodP      = v => { setSelectedMood(v); localStorage.setItem('vault_mood', v) }
+  const setSortByP    = v => { setSortBy(v);       localStorage.setItem(getStorageKey('vault_sortBy'), v) }
+  const setSortOrderP = v => { setSortOrder(v);    localStorage.setItem(getStorageKey('vault_sortOrder'), v) }
+  const setFilterP    = v => { setFilter(v);       localStorage.setItem(getStorageKey('vault_filter'), v) }
+  const setMoodP      = v => { setSelectedMood(v); localStorage.setItem(getStorageKey('vault_mood'), v) }
 
   const handleLogout = () => { removeToken(); setAuthed(false); setBooks([]) }
 
@@ -845,8 +875,9 @@ export default function App() {
 
   useEffect(() => { setLibOpen(false) }, [filter, selectedMood])
 
-  // Show auth page if not logged in
   if (!authed) return <AuthPage onLogin={() => setAuthed(true)} />
+
+  const userEmail = getUserEmail()
 
   return (
     <>
@@ -879,7 +910,7 @@ export default function App() {
               style={{ padding:'6px 16px', borderRadius:'9px', cursor:'pointer', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.4)', fontSize:'0.75rem', transition:'all 0.2s' }}
               onMouseEnter={e=>{ e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='#f8717155' }}
               onMouseLeave={e=>{ e.currentTarget.style.color='rgb(255, 253, 253)'; e.currentTarget.style.borderColor='rgba(255, 254, 254, 0.1)' }}>
-              Logout ➜]
+              Logout ➜
             </button>
           </header>
 
@@ -898,8 +929,8 @@ export default function App() {
             })}
           </div>
 
-          {/* Heatmap */}
-          <div style={{ marginBottom:'36px' }}><Heatmap /></div>
+          {/* Heatmap — key forces remount on user change so buildGrid re-runs fresh */}
+          <div style={{ marginBottom:'36px' }}><Heatmap key={userEmail} /></div>
 
           {/* Two-column layout */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'28px', alignItems:'stretch' }}>
@@ -949,7 +980,8 @@ export default function App() {
                 </div>
               </div>
               <MoodFilterPanel selectedMood={selectedMood} onChange={setMoodP} books={books} />
-              <TBRJar />
+              {/* key forces remount on user change so TBRJar reads the correct user's storage */}
+              <TBRJar key={userEmail} />
             </div>
 
             {/* RIGHT COLUMN */}
@@ -974,8 +1006,9 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <ReadingGoals completedCount={stats.completed} />
-              <Challenges />
+              {/* key forces remount on user change so ReadingGoals reads the correct user's storage */}
+              <ReadingGoals key={userEmail} completedCount={stats.completed} />
+              <Challenges key={userEmail} />
             </div>
           </div>
         </div>
@@ -986,3 +1019,4 @@ export default function App() {
     </>
   )
 }
+
