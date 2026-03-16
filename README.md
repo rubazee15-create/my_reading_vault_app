@@ -55,24 +55,24 @@ Following the modular approach:
 * Base API: http://127.0.0.1:8000
 * Interactive Swagger UI: http://127.0.0.1:8000/docs
 
-## 🖥️ Frontend Setup
+### 🖥️ Frontend Setup
 
-### 1. Navigate to the frontend directory:
+1. **Navigate to the frontend directory:**
 ```
 cd frontend
 ```
 
-### 2. Install frontend dependencies:
+2. **Install frontend dependencies:**
 ```
 npm install
 ```
 
-### 3. Start the React development server:
+3. **Start the React development server:**
 ```
 npm run dev
 ```
 
-### 4. Access the frontend:
+4. **Access the frontend:**
 * __http://localhost:5173__
 
 > Make sure the backend server is running before starting the frontend.
