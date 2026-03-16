@@ -73,7 +73,7 @@ npm run dev
 ```
 
 4. **Access the frontend:**
-* __http://localhost:5173__
+* Frontend (Vite Dev Server): __http://localhost:5173__
 
 > Make sure the backend server is running before starting the frontend.
 
