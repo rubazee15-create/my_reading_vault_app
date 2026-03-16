@@ -11,7 +11,7 @@ The Reading Vault is a digital tracker designed to help users manage their readi
 * **Server:** Uvicorn
 * **Language:** Python
 * **Validation:** Pydantic
-* **Frontend:** React
+* **Frontend:** React (Vite)
 
 ### 📂 Project Structure
 Following the modular approach:
