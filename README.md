@@ -33,7 +33,7 @@ Following the modular approach:
 
 ### ⚙️ Installation & Setup
 
-1. **Clone & Navigate the repository:**
+1. **Clone & Navigate the Repository:**
    ```bash
    git clone https://github.com/rubazee15-create/my_reading_vault_app.git
    cd my_reading_vault_app
@@ -57,22 +57,22 @@ Following the modular approach:
 
 ### 🖥️ Frontend Setup
 
-1. **Navigate to the frontend directory:**
+1. **Navigate to the Frontend Directory:**
 ```
 cd frontend
 ```
 
-2. **Install frontend dependencies:**
+2. **Install Frontend Dependencies:**
 ```
 npm install
 ```
 
-3. **Start the React development server:**
+3. **Start the React Development Server:**
 ```
 npm run dev
 ```
 
-4. **Access the frontend:**
+4. **Access the Frontend:**
 * Frontend (Vite Dev Server): __http://localhost:5173__
 
 > Make sure the backend server is running before starting the frontend.
