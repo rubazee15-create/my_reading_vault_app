@@ -65,7 +65,7 @@ Following the modular approach:
 * [x] Database Migrations: Integrate Alembic to handle schema changes without losing data.
 * [x] Multi-Tenancy: Add Users table and associate books with specific user IDs.
 * [x] User Authentication: Implement OAuth2 with JWT (JSON Web Tokens) and refresh token strategy.
-* [ ] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
+* [x] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
 
 #### **🟠 Phase 4: Enhanced Features & Analytics**
 * [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
