@@ -98,8 +98,8 @@ npm run dev
 * [x] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
 
 #### **🟠 Phase 4: Enhanced Features & Analytics**
-* [ ] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
-* [ ] Reading Progress API: Logic to calculate percentage read.
+* [x] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
+* [x] Reading Progress API: Logic to calculate percentage read.
 * [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
 * [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
 * [ ] Unit Testing: Introduce pytest with a separate test database, targeting 80%+ coverage.
