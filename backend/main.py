@@ -134,6 +134,38 @@ def view_books(db: Session = Depends(get_db), current_user: User = Depends(get_c
 
 # Including new operations to understand path parameters and query parameters in FastAPI.
 
+@app.get("/search")
+def search_books(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    genre: Optional[str] = Query(default=None, description="Filter by genre e.g. Fantasy"),
+    status: Optional[Literal["completed", "not read", "reading"]] = Query(default=None, description="Filter by reading status"),
+    rating: Optional[int] = Query(default=None, ge=0, le=5, description="Filter by rating (0-5)"),
+    search: Optional[str] = Query(default=None, description="Search by title or author name")
+):
+    # Start with base query — only this user's books
+    query = db.query(BookModel).filter(BookModel.owner_id == current_user.id)
+
+    # Apply filters only if they were provided
+    if genre:
+        query = query.filter(BookModel.genre.ilike(f"%{genre}%"))
+    if status:
+        query = query.filter(BookModel.status == status)
+    if rating is not None:
+        query = query.filter(BookModel.rating == rating)
+    if search:
+        query = query.filter(
+            BookModel.title.ilike(f"%{search}%") |
+            BookModel.author.ilike(f"%{search}%")
+        )
+
+    books = query.all()
+
+    if not books:
+        raise HTTPException(status_code=404, detail="No books found matching your filters!")
+
+    return books
+
 # Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
 def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
