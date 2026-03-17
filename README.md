@@ -10,23 +10,30 @@ The Reading Vault is a digital tracker designed to help users manage their readi
 * **ORM:** SQLAlchemy
 * **Server:** Uvicorn
 * **Language:** Python
-* **Validation:** Pydantic 
+* **Validation:** Pydantic
+* **Frontend:** React (Vite)
 
 ### 📂 Project Structure
 Following the modular approach:
 
 ```text
-├── main.py           # App entry point
-├── models.py         # SQLAlchemy database models
-├── database.py       # Database connection & SessionLocal
-├── migrate.py        # Script to migrate JSON data to Postgres
-├── books.json        # (Legacy) Source data for migration
-└── requirements.txt  # Project dependencies
+├── backend/
+│   ├── main.py           # App entry point
+│   ├── models.py         # SQLAlchemy database models
+│   ├── database.py       # Database connection & SessionLocal
+│   ├── migrate.py        # Script to migrate JSON data to Postgres
+│   ├── books.json        # (Legacy) Source data for migration
+│   ├── alembic.ini.example  # Alembic config template
+│   ├── .env.example      # Environment variables template
+│   └── requirements.txt  # Project dependencies
+└── frontend/
+    ├── src/              # React source files
+    └── package.json      # Frontend dependencies
 ```
 
 ### ⚙️ Installation & Setup
 
-1. **Clone & Navigate the repository:**
+1. **Clone & Navigate the Repository:**
    ```bash
    git clone https://github.com/rubazee15-create/my_reading_vault_app.git
    cd my_reading_vault_app
@@ -47,6 +54,29 @@ Following the modular approach:
 5. **Access the API:**
 * Base API: http://127.0.0.1:8000
 * Interactive Swagger UI: http://127.0.0.1:8000/docs
+
+### 🖥️ Frontend Setup
+
+1. **Navigate to the Frontend Directory:**
+```
+cd frontend
+```
+
+2. **Install Frontend Dependencies:**
+```
+npm install
+```
+
+3. **Start the React Development Server:**
+```
+npm run dev
+```
+
+4. **Access the Frontend:**
+* Frontend (Vite Dev Server): __http://localhost:5173__
+
+> Make sure the backend server is running before starting the frontend.
+
 
 ### 📈 Roadmap
 #### **🟢 Phase 1: Foundation & Persistence (Completed)**
