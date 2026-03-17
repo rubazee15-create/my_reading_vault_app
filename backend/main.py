@@ -182,6 +182,50 @@ def view_book_title(book_title: str = Path(..., description="Add the Title of th
         raise HTTPException(status_code=400, detail="Book title not found!")
     return book
 
+@app.get("/book/{book_id}/progress")
+def book_progress(
+    book_id: int = Path(..., gt=0, description="ID of the book"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch the book — make sure it belongs to this user
+    book = db.query(BookModel).filter(
+        BookModel.id == book_id,
+        BookModel.owner_id == current_user.id
+    ).first()
+
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found!")
+
+    # Calculate progress
+    pages_left = book.total_pages - book.pages_read
+    percentage = round((book.pages_read / book.total_pages) * 100, 2)
+
+    # Friendly message based on progress
+    if percentage == 0:
+        message = "You haven't started this book yet. Let's go! 📖"
+    elif percentage < 25:
+        message = "Just getting started — keep going! 🌱"
+    elif percentage < 50:
+        message = "You're making good progress! 💪"
+    elif percentage < 75:
+        message = "More than halfway there! 🔥"
+    elif percentage < 100:
+        message = "Almost done — just a little more! 🏁"
+    else:
+        message = "You finished this book! 🎉"
+
+    return {
+        "title": book.title,
+        "author": book.author,
+        "status": book.status,
+        "pages_read": book.pages_read,
+        "total_pages": book.total_pages,
+        "pages_left": pages_left,
+        "percentage": percentage,
+        "message": message
+    }
+
 # Query Parameters
 @app.get("/sort")
 def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), 
