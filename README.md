@@ -91,13 +91,13 @@ npm run dev
 * [x] Bookshelf visualization
 * [x] Reading goals, heatmap, challenges
 
-#### **🟡 Phase 3: Security & Relationships (Current)** 
+#### **🟡 Phase 3: Security & Relationships (Completed)** 
 * [x] Database Migrations: Integrate Alembic to handle schema changes without losing data.
 * [x] Multi-Tenancy: Add Users table and associate books with specific user IDs.
 * [x] User Authentication: Implement OAuth2 with JWT (JSON Web Tokens) and refresh token strategy.
 * [x] Complex Relationships: Add an Authors table with a One-to-Many relationship to Books.
 
-#### **🟠 Phase 4: Enhanced Features & Analytics**
+#### **🟠 Phase 4: Enhanced Features & Analytics (Current)**
 * [x] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
 * [x] Reading Progress API: Logic to calculate percentage read.
 * [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
