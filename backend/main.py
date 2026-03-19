@@ -166,60 +166,50 @@ def search_books(
 
     return books
 
-# Endpoint for ISBN lookup using Open Library API - user will tyoe the ISBN number and we will fetch the book details from the Open Library API and return it to the user. This will help the user to quickly add a book to their reading vault without having to manually enter all the details. We will also handle errors such as invalid ISBN, book not found, and Open Library API being down.
-@app.get("/books/isbn/{isbn}")
-async def lookup_isbn(
-    isbn: str = Path(..., description="ISBN of the book e.g. 9781250301697"),
+# Adding an endpoint to search for books using the Open Library API. This will allow users to search for books by title and get details like author, total pages, published year, cover image etc. This can be used as a reference for users to add books to their reading vault.
+@app.get("/books/search")
+async def search_open_library(
+    title: str = Query(..., description="Book title to search for e.g. Fourth Wing"),
     current_user: User = Depends(get_current_user)
 ):
-    # Open Library API URL — no API key needed!
-    url = f"https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data"
+    url = f"https://openlibrary.org/search.json?title={title}&limit=5"
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
 
-    # If Open Library is down or unreachable
     if response.status_code != 200:
         raise HTTPException(status_code=503, detail="Open Library API is unavailable. Try again later.")
 
     data = response.json()
-    book_key = f"ISBN:{isbn}"
+    results = data.get("docs", [])
 
-    # If ISBN not found in Open Library
-    if book_key not in data:
-        raise HTTPException(status_code=404, detail=f"No book found for ISBN {isbn}. Check the ISBN and try again.")
+    if not results:
+        raise HTTPException(status_code=404, detail=f"No books found for '{title}'. Try a different title.")
 
-    book_data = data[book_key]
+    # Format the results cleanly
+    books = []
+    for book in results:
+        isbn_list = book.get("isbn", [])
+        isbn = isbn_list[0] if isbn_list else None
 
-    # Safely extract each field — use "Unknown" if not available
-    title = book_data.get("title", "Unknown Title")
+        # Build cover image URL from Open Library cover ID
+        cover_id = book.get("cover_i")
+        cover_image = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else None
 
-    # Authors is a list e.g. [{"name": "Rebecca Yarros"}]
-    authors = book_data.get("authors", [])
-    author = authors[0]["name"] if authors else "Unknown Author"
-
-    # Publishers is also a list
-    publishers = book_data.get("publishers", [])
-    publisher = publishers[0]["name"] if publishers else "Unknown Publisher"
-
-    total_pages = book_data.get("number_of_pages", None)
-
-    # Publish date e.g. "2023" or "May 2023"
-    published_year = book_data.get("publish_date", "Unknown")
-
-    # Cover image — Open Library provides small/medium/large
-    covers = book_data.get("cover", {})
-    cover_image = covers.get("large") or covers.get("medium") or covers.get("small") or None
+        books.append({
+            "title": book.get("title", "Unknown Title"),
+            "author": book.get("author_name", ["Unknown Author"])[0],
+            "total_pages": book.get("number_of_pages_median", None),
+            "published_year": book.get("first_publish_year", None),
+            "cover_image": cover_image,
+            "isbn": isbn,
+            "open_library_key": book.get("key")  # Unique ID — useful for frontend selection
+        })
 
     return {
-        "isbn": isbn,
-        "title": title,
-        "author": author,
-        "total_pages": total_pages,
-        "published_year": published_year,
-        "publisher": publisher,
-        "cover_image": cover_image,
-        "source": "Open Library"
+        "query": title,
+        "total_results": len(books),
+        "books": books
     }
 
 # Path Parameters:
