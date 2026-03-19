@@ -11,7 +11,7 @@ from database import get_db
 from models import Book as BookModel, User, Author as AuthorModel
 import json
 from routers.auth_router import router as auth_router
-
+import httpx 
 
 
 app = FastAPI()
@@ -165,6 +165,62 @@ def search_books(
         raise HTTPException(status_code=404, detail="No books found matching your filters!")
 
     return books
+
+# Endpoint for ISBN lookup using Open Library API - user will tyoe the ISBN number and we will fetch the book details from the Open Library API and return it to the user. This will help the user to quickly add a book to their reading vault without having to manually enter all the details. We will also handle errors such as invalid ISBN, book not found, and Open Library API being down.
+@app.get("/books/isbn/{isbn}")
+async def lookup_isbn(
+    isbn: str = Path(..., description="ISBN of the book e.g. 9781250301697"),
+    current_user: User = Depends(get_current_user)
+):
+    # Open Library API URL — no API key needed!
+    url = f"https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+
+    # If Open Library is down or unreachable
+    if response.status_code != 200:
+        raise HTTPException(status_code=503, detail="Open Library API is unavailable. Try again later.")
+
+    data = response.json()
+    book_key = f"ISBN:{isbn}"
+
+    # If ISBN not found in Open Library
+    if book_key not in data:
+        raise HTTPException(status_code=404, detail=f"No book found for ISBN {isbn}. Check the ISBN and try again.")
+
+    book_data = data[book_key]
+
+    # Safely extract each field — use "Unknown" if not available
+    title = book_data.get("title", "Unknown Title")
+
+    # Authors is a list e.g. [{"name": "Rebecca Yarros"}]
+    authors = book_data.get("authors", [])
+    author = authors[0]["name"] if authors else "Unknown Author"
+
+    # Publishers is also a list
+    publishers = book_data.get("publishers", [])
+    publisher = publishers[0]["name"] if publishers else "Unknown Publisher"
+
+    total_pages = book_data.get("number_of_pages", None)
+
+    # Publish date e.g. "2023" or "May 2023"
+    published_year = book_data.get("publish_date", "Unknown")
+
+    # Cover image — Open Library provides small/medium/large
+    covers = book_data.get("cover", {})
+    cover_image = covers.get("large") or covers.get("medium") or covers.get("small") or None
+
+    return {
+        "isbn": isbn,
+        "title": title,
+        "author": author,
+        "total_pages": total_pages,
+        "published_year": published_year,
+        "publisher": publisher,
+        "cover_image": cover_image,
+        "source": "Open Library"
+    }
 
 # Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
