@@ -100,7 +100,7 @@ npm run dev
 #### **🟠 Phase 4: Enhanced Features & Analytics (Current)**
 * [x] Search & Filtering: Add query parameters to filter by genre, rating, or reading status.
 * [x] Reading Progress API: Logic to calculate percentage read.
-* [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via ISBN.
+* [ ] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via Book Title Search.
 * [ ] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
 * [ ] Unit Testing: Introduce pytest with a separate test database, targeting 80%+ coverage.
 
