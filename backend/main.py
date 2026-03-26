@@ -1,6 +1,7 @@
 # Importing libraries
-from fastapi import FastAPI, Path, HTTPException, Query, Depends
+from fastapi import FastAPI, Path, HTTPException, Query, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Annotated, Literal, Optional
@@ -12,9 +13,14 @@ from models import Book as BookModel, User, Author as AuthorModel
 import json
 from routers.auth_router import router as auth_router
 import httpx 
+import shutil 
+import uuid
+import os
 
 
 app = FastAPI()
+
+app.mount("/covers", StaticFiles(directory="uploads"), name="covers")
 
 # Preparing the backend - CORS(Cross-Origin Resource Sharing)
 # Defining who is allowed to talk to my API 
@@ -270,6 +276,50 @@ def import_book(
     return JSONResponse(status_code=201, content={
         "message": f"'{book.title}' has been added to your vault!",
         "book_id": new_book.id
+    })
+
+@app.post("/book/{book_id}/upload-cover")
+async def upload_cover(
+    book_id: int = Path(..., gt=0, description="ID of the book"),
+    file: UploadFile = File(..., description="Image file to upload (jpg, png, webp)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check book exists and belongs to this user
+    book = db.query(BookModel).filter(
+        BookModel.id == book_id,
+        BookModel.owner_id == current_user.id
+    ).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found!")
+
+    # Only allow image files
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type! Only JPG, PNG, and WEBP are allowed."
+        )
+
+    # Generate a unique filename so files never overwrite each other
+    # e.g. "a3f9c2d1-4b5e.jpg"
+    extension = file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{extension}"
+    file_path = f"uploads/{unique_filename}"
+
+    # Save the file to the uploads folder
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Save the public URL to the database
+    cover_url = f"http://localhost:8000/covers/{unique_filename}"
+    book.cover_image = cover_url
+    db.commit()
+    db.refresh(book)
+
+    return JSONResponse(status_code=200, content={
+        "message": "Cover image uploaded successfully!",
+        "cover_image": cover_url
     })
 
 # Path Parameters:

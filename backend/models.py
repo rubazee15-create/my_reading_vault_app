@@ -34,6 +34,7 @@ class Book(Base):
     rating = Column(Integer, nullable=True)
     date_started = Column(String, nullable=True)
     date_finished = Column(String, nullable=True)
+    cover_image = Column(String, nullable=True) # Will store the image URL or path
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     author_id = Column(Integer, ForeignKey("authors.id"), nullable=True)
 
