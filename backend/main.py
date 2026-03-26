@@ -102,6 +102,21 @@ class BookUpdate(BaseModel):
     date_started: Optional[str] = None
     date_finished: Optional[str] = None
 
+# New Pydantic model for importing books from Open Library API. This will be used in the frontend when the user selects a book from the search results and wants to add it to their reading vault. The fields in this model are a combination of the fields we get from the Open Library API and the fields we have in our Book model. The fields that are not provided by the Open Library API will be required for the user to fill in before adding the book to their reading vault.
+class BookImport(BaseModel):
+    title: str
+    author: str
+    total_pages: Optional[int] = None
+    published_year: Optional[int] = None
+    cover_image: Optional[str] = None
+    isbn: Optional[str] = None
+    # User still needs to fill these — Open Library doesn't know them
+    genre: str
+    status: Literal["completed", "not read", "reading"]
+    pages_read: int = 0
+    rating: Optional[int] = Field(default=None, ge=0, le=5)
+    date_started: Optional[str] = None
+    date_finished: Optional[str] = None
 
 # # Before making the endpoints we have to make a function to load the data in the books.json file because we will be using that data in the endpoints.
 # def load_data():
@@ -211,6 +226,51 @@ async def search_open_library(
         "total_results": len(books),
         "books": books
     }
+
+# Adding an endpoint to import a book from the Open Library search results into the user's reading vault. This will take the details of the selected book from the frontend, validate them, and then save them to the database (JSON file) under the user's account.
+@app.post("/books/import")
+def import_book(
+    book: BookImport,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check if this book already exists in the user's vault
+    existing = db.query(BookModel).filter(
+        BookModel.title == book.title,
+        BookModel.owner_id == current_user.id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="This book is already in your vault!")
+
+    # Validate pages_read vs total_pages if total_pages is provided
+    if book.total_pages and book.pages_read > book.total_pages:
+        raise HTTPException(status_code=400, detail="Pages read cannot exceed total pages!")
+
+    # Validate completed books have a finish date
+    if book.status == "completed" and not book.date_finished:
+        raise HTTPException(status_code=400, detail="Completed books require a finished date!")
+
+    # Save to database
+    new_book = BookModel(
+        title=book.title,
+        author=book.author,
+        genre=book.genre,
+        status=book.status,
+        pages_read=book.pages_read,
+        total_pages=book.total_pages or 0,  # Default to 0 if Open Library didn't have it
+        rating=book.rating,
+        date_started=book.date_started,
+        date_finished=book.date_finished,
+        owner_id=current_user.id
+    )
+    db.add(new_book)
+    db.commit()
+    db.refresh(new_book)
+
+    return JSONResponse(status_code=201, content={
+        "message": f"'{book.title}' has been added to your vault!",
+        "book_id": new_book.id
+    })
 
 # Path Parameters:
 @app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
