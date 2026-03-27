@@ -102,7 +102,7 @@ npm run dev
 * [x] Reading Progress API: Logic to calculate percentage read.
 * [x] External Integration: Connect to the Open Library API or Google Books API to fetch book metadata via Book Title Search.
 * [x] Image Support: Allow users to upload book cover images (stored in AWS S3 or locally).
-* [ ] Unit Testing: Introduce pytest with a separate test database, targeting 80%+ coverage.
+* [x] Unit Testing: Introduced pytest with a separate SQLite test database, achieving 83% coverage across 24 passing tests.
 
 #### **🔴 Phase 5: Scaling & DevOps**
 * [ ] Containerization: Create a docker-compose.yml to spin up the FastAPI app and PostgreSQL instantly.
