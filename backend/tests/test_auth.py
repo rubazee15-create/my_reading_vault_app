@@ -57,3 +57,21 @@ def test_get_me(auth_client):
     response = auth_client.get("/auth/me")
     assert response.status_code == 200
     assert response.json()["email"] == "test@example.com"
+
+def test_refresh_token(client):
+    # Register and login first
+    client.post("/auth/register", json={
+        "username": "refreshuser",
+        "email": "refresh@example.com",
+        "password": "testpassword123"
+    })
+    response = client.post("/auth/login", data={
+        "username": "refresh@example.com",
+        "password": "testpassword123"
+    })
+    refresh_token = response.json()["refresh_token"]
+
+    # Now test the refresh endpoint
+    response = client.post(f"/auth/refresh?token={refresh_token}")
+    assert response.status_code == 200
+    assert "access_token" in response.json()
