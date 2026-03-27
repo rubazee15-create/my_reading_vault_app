@@ -86,3 +86,47 @@ def test_book_progress(auth_client, sample_book):
     data = response.json()
     assert data["percentage"] == round((100 / 476) * 100, 2)
     assert data["pages_left"] == 376
+
+def test_search_books(auth_client, sample_book):
+    response = auth_client.get("/search?search=Project")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+def test_search_no_results(auth_client):
+    response = auth_client.get("/search?search=xyznonexistent")
+    assert response.status_code == 404
+
+def test_filter_by_status(auth_client, sample_book):
+    response = auth_client.get("/search?status=reading")
+    assert response.status_code == 200
+
+def test_filter_by_genre(auth_client, sample_book):
+    response = auth_client.get("/search?genre=Science Fiction")
+    assert response.status_code == 200
+
+def test_sort_books(auth_client, sample_book):
+    response = auth_client.get("/sort?sort_by=rating&order=asc")
+    assert response.status_code == 200
+
+def test_sort_invalid_field(auth_client):
+    response = auth_client.get("/sort?sort_by=invalid_field&order=asc")
+    assert response.status_code == 400
+
+def test_import_book(auth_client):
+    response = auth_client.post("/books/import", json={
+        "title": "Dune",
+        "author": "Frank Herbert",
+        "total_pages": 412,
+        "genre": "Science Fiction",
+        "status": "not read",
+        "pages_read": 0
+    })
+    assert response.status_code == 201
+
+def test_create_author(auth_client):
+    response = auth_client.post("/authors", json={"name": "Andy Weir"})
+    assert response.status_code == 200
+
+def test_get_authors(auth_client):
+    response = auth_client.get("/authors")
+    assert response.status_code == 200
