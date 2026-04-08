@@ -105,7 +105,7 @@ npm run dev
 * [x] Unit Testing: Introduced pytest with a separate SQLite test database, achieving 83% coverage across 24 passing tests.
 
 #### **🔴 Phase 5: Scaling & DevOps**
-* [ ] Containerization: Create a docker-compose.yml to spin up the FastAPI app and PostgreSQL instantly.
+* [x] Containerization: Create a docker-compose.yml to spin up the FastAPI app and PostgreSQL instantly.
 * [ ] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
 * [ ] CI/CD Pipeline: Set up GitHub Actions to run tests automatically on every push.
    
