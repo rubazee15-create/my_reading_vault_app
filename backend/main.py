@@ -18,6 +18,42 @@ import uuid
 import os
 
 
+tags_metadata = [
+    {
+        "name": "General",
+        "description": "Health check and general info endpoints"
+    },
+    {
+        "name": "Books",
+        "description": "Create, read, update and delete your books"
+    },
+    {
+        "name": "Search",
+        "description": "Search and filter books by genre, status, rating or title"
+    },
+    {
+        "name": "Progress",
+        "description": "Track reading progress percentage for a specific book"
+    },
+    {
+        "name": "Open Library",
+        "description": "Search books by title and import them into your vault"
+    },
+    {
+        "name": "Covers",
+        "description": "Upload book cover images"
+    },
+    {
+        "name": "Authors",
+        "description": "Manage authors and view their books"
+    },
+    {
+        "name": "Auth",
+        "description": "Register, login, refresh tokens and get current user"
+    },
+]
+
+# ✅ This goes SECOND — uses tags_metadata
 app = FastAPI(
     title="📚 Reading Vault API",
     description="""
@@ -43,42 +79,6 @@ A fully featured API to track and manage your reading habits.
         "name": "MIT License"
     }
 )
-
-# Tags define the groups shown in Swagger UI
-tags_metadata = [
-    {
-        "name": "General",
-        "description": "Health check and general info endpoints"
-    },
-    {
-        "name": "Books",
-        "description": "Create, read, update and delete your books"
-    },
-    {
-        "name": "Search",
-        "description": "Search and filter books"
-    },
-    {
-        "name": "Progress",
-        "description": "Track reading progress"
-    },
-    {
-        "name": "Open Library",
-        "description": "Search and import books from Open Library"
-    },
-    {
-        "name": "Covers",
-        "description": "Upload book cover images"
-    },
-    {
-        "name": "Authors",
-        "description": "Manage authors"
-    },
-    {
-        "name": "Auth",
-        "description": "Register, login and manage authentication"
-    },
-]
 
 app.mount("/covers", StaticFiles(directory="uploads"), name="covers")
 
