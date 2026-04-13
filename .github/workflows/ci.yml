@@ -1,0 +1,40 @@
+name: Reading Vault CI
+
+# Runs automatically on every push and pull request to main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 — Download your code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2 — Install Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      # Step 3 — Install all dependencies
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      # Step 4 — Run all tests with coverage
+      - name: Run tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/ -v --cov=. --cov-report=term-missing
+
+        # These are fake env variables just for testing
+        env:
+          SECRET_KEY: "test-secret-key-for-ci-only"
+          DATABASE_URL: "sqlite:///./test.db"
