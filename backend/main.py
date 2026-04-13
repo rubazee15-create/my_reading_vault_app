@@ -18,7 +18,67 @@ import uuid
 import os
 
 
-app = FastAPI()
+app = FastAPI(
+    title="📚 Reading Vault API",
+    description="""
+## Welcome to the Reading Vault API!
+
+A fully featured API to track and manage your reading habits.
+
+### Features:
+- 📖 **Books** — Add, update, delete and track your books
+- 🔍 **Search** — Filter books by genre, status, rating
+- 📊 **Progress** — Track reading progress with percentage
+- 🌐 **Open Library** — Search and import books by title
+- 🖼️ **Covers** — Upload book cover images
+- 🔐 **Auth** — Secure JWT authentication
+    """,
+    version="1.0.0",
+    openapi_tags=tags_metadata,
+    contact={
+        "name": "Reading Vault",
+        "email": "support@readingvault.com"
+    },
+    license_info={
+        "name": "MIT License"
+    }
+)
+
+# Tags define the groups shown in Swagger UI
+tags_metadata = [
+    {
+        "name": "General",
+        "description": "Health check and general info endpoints"
+    },
+    {
+        "name": "Books",
+        "description": "Create, read, update and delete your books"
+    },
+    {
+        "name": "Search",
+        "description": "Search and filter books"
+    },
+    {
+        "name": "Progress",
+        "description": "Track reading progress"
+    },
+    {
+        "name": "Open Library",
+        "description": "Search and import books from Open Library"
+    },
+    {
+        "name": "Covers",
+        "description": "Upload book cover images"
+    },
+    {
+        "name": "Authors",
+        "description": "Manage authors"
+    },
+    {
+        "name": "Auth",
+        "description": "Register, login and manage authentication"
+    },
+]
 
 app.mount("/covers", StaticFiles(directory="uploads"), name="covers")
 
@@ -140,22 +200,22 @@ class BookImport(BaseModel):
 # ENDPOINTS
 # Creating our endpoints - Staring with the basic ones and then moving to the more complex ones.
 # Starting with GET (Retrieve) endpoints to view the data in the JSON file and then moving to POST endpoint to create a new book and add it to the JSON file.
-@app.get("/")           # This endpoint will be the root endpoint of our API and will return a simple message to indicate that the API is working.
+@app.get("/",  tags=["General"])           # This endpoint will be the root endpoint of our API and will return a simple message to indicate that the API is working.
 def hello():
     return {"message": "Reading Tracker API is up and running!"}
 
-@app.get("/about")
+@app.get("/about", tags=["General"])
 def about():            # This endpoint will provide information about the API and its purpose.
     return {"message": "This is a fully functional API to track and manage your reading habits."}
 
-@app.get("/view_books")
+@app.get("/view_books", tags=["Books"])
 def view_books(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):  # This endpoint will allow users to view all the books they have added to their reading vault.
     books = db.query(BookModel).filter(BookModel.owner_id == current_user.id).all()
     return books
 
 # Including new operations to understand path parameters and query parameters in FastAPI.
 
-@app.get("/search")
+@app.get("/search", tags=["Search"])
 def search_books(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -188,7 +248,7 @@ def search_books(
     return books
 
 # Adding an endpoint to search for books using the Open Library API. This will allow users to search for books by title and get details like author, total pages, published year, cover image etc. This can be used as a reference for users to add books to their reading vault.
-@app.get("/books/search")
+@app.get("/books/search", tags=["Open Library"])
 async def search_open_library(
     title: str = Query(..., description="Book title to search for e.g. Fourth Wing"),
     current_user: User = Depends(get_current_user)
@@ -234,7 +294,7 @@ async def search_open_library(
     }
 
 # Adding an endpoint to import a book from the Open Library search results into the user's reading vault. This will take the details of the selected book from the frontend, validate them, and then save them to the database (JSON file) under the user's account.
-@app.post("/books/import")
+@app.post("/books/import", tags=["Open Library"])
 def import_book(
     book: BookImport,
     db: Session = Depends(get_db),
@@ -278,7 +338,7 @@ def import_book(
         "book_id": new_book.id
     })
 
-@app.post("/book/{book_id}/upload-cover")
+@app.post("/book/{book_id}/upload-cover", tags=["Covers"])
 async def upload_cover(
     book_id: int = Path(..., gt=0, description="ID of the book"),
     file: UploadFile = File(..., description="Image file to upload (jpg, png, webp)"),
@@ -323,7 +383,7 @@ async def upload_cover(
     })
 
 # Path Parameters:
-@app.get("/book/{book_id}")     # This endpoint will allow users to view a specific book by its ID using path parameters.")
+@app.get("/book/{book_id}", tags=["Books"])     # This endpoint will allow users to view a specific book by its ID using path parameters.")
 def view_book(book_id: int = Path(..., description="ID of the book in the Database", example="1,2..." , gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
     book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
@@ -331,14 +391,14 @@ def view_book(book_id: int = Path(..., description="ID of the book in the Databa
         raise HTTPException(status_code=404, detail="Book not found!")
     return book
 
-@app.get("/book_title/{book_title}")
+@app.get("/book_title/{book_title}", tags=["Search"])
 def view_book_title(book_title: str = Path(..., description="Add the Title of the book in the Database", example="Fourth Wing"), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     book = db.query(BookModel).filter(BookModel.title.ilike(f"%{book_title}%"), BookModel.owner_id == current_user.id).first()
     if not book:
         raise HTTPException(status_code=400, detail="Book title not found!")
     return book
 
-@app.get("/book/{book_id}/progress")
+@app.get("/book/{book_id}/progress", tags=["Progress"])
 def book_progress(
     book_id: int = Path(..., gt=0, description="ID of the book"),
     db: Session = Depends(get_db),
@@ -383,7 +443,7 @@ def book_progress(
     }
 
 # Query Parameters
-@app.get("/sort")
+@app.get("/sort", tags=["Search"])
 def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'total_pages'"), 
                order: str = Query("asc", description= "Sort in ascending or descending order"),
                db: Session = Depends(get_db),
@@ -407,7 +467,7 @@ def sort_books(sort_by: str = Query(..., description="Sort on the basis of 'tota
 
 # Making an endpoint for the fields we entered in the class with the help of Pydantic model
 # Making a POST (Create) endpoint to create a new book and add it to the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will add that data to the JSON file using the save_data function. We will also check if the book already exists in the JSON file before adding it to avoid duplicates.
-@app.post("/create")
+@app.post("/create", tags=["Books"])
 def create_book(book: Book, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     existing = db.query(BookModel).filter(BookModel.title == book.title, BookModel.owner_id == current_user.id).first()
     if existing:
@@ -437,7 +497,7 @@ def create_book(book: Book, db: Session = Depends(get_db), current_user: User = 
 # Making a PUT (Update) endpoint to update the existing book's data in the JSON file. We will be using the Book class we created earlier to validate the incoming data and then we will update that data in the JSON file using the save_data function. We will also check if the book exists in the JSON file before updating it to avoid errors.
 # First, a new Pydantic model will be made so that all the fields made this time become Optional instead of Required
 # The new Pydantic model is made right below the first Pydantic model 
-@app.put("/edit/{book_id}")
+@app.put("/edit/{book_id}", tags=["Books"])
 def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
     if not book:
@@ -452,7 +512,7 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
     return JSONResponse(status_code=200, content={"message": "Book updated successfully!"})
 
 # Making a DELETE endpoint
-@app.delete("/delete/{book_id}")
+@app.delete("/delete/{book_id}", tags=["Books"])
 def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     book = db.query(BookModel).filter(BookModel.id == book_id, BookModel.owner_id == current_user.id).first()
     if not book:
@@ -470,7 +530,7 @@ app.include_router(auth_router)
 class AuthorCreate(BaseModel):
     name: str
 
-@app.post("/authors")
+@app.post("/authors", tags=["Authors"])
 def create_author(author: AuthorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     existing = db.query(AuthorModel).filter(AuthorModel.name == author.name).first()
     if existing:
@@ -481,11 +541,11 @@ def create_author(author: AuthorCreate, db: Session = Depends(get_db), current_u
     db.refresh(new_author)
     return new_author
 
-@app.get("/authors")
+@app.get("/authors", tags=["Authors"])
 def get_authors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(AuthorModel).all()
 
-@app.get("/authors/{author_id}/books")
+@app.get("/authors/{author_id}/books", tags=["Authors"])
 def get_books_by_author(author_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     author = db.query(AuthorModel).filter(AuthorModel.id == author_id).first()
     if not author:
