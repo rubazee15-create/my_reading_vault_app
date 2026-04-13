@@ -106,7 +106,7 @@ npm run dev
 
 #### **🔴 Phase 5: Scaling & DevOps**
 * [x] Containerization: Create a docker-compose.yml to spin up the FastAPI app and PostgreSQL instantly.
-* [ ] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
+* [x] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
 * [ ] CI/CD Pipeline: Set up GitHub Actions to run tests automatically on every push.
    
    
