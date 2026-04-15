@@ -108,6 +108,6 @@ npm run dev
 * [x] Containerization: Create a docker-compose.yml to spin up the FastAPI app and PostgreSQL instantly.
 * [x] API Documentation: Enhance Swagger UI with custom tags, descriptions, and example responses.
 * [x] CI/CD Pipeline: Set up GitHub Actions to run tests automatically on every push.
-* [ ] Supabase Integration.
+* [x] Supabase Integration: Connect the Reading Vault App to Supabase. 
    
    
