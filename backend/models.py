@@ -26,7 +26,7 @@ class Book(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    author = Column(String, nullable=False)
+    # author = Column(String, nullable=False)
     genre = Column(String, nullable=False)
     status = Column(String, nullable=False)  # "completed", "reading", "not read"
     pages_read = Column(Integer, default=0)
